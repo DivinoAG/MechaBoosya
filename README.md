@@ -8,7 +8,10 @@ This Discord bot helps server moderators identify popular forum posts within spe
     -   **`channel` (required)**: The forum channel to analyze.
     -   **`number_of_posts` (optional)**: Limits the results to the top X posts. Defaults to all posts.
     -   **`direct_message` (optional)**: Sends the report as a direct message to the user. Defaults to `false` (sends to channel).
--   Counts only the primary reaction (default emoji) on the initial post of each thread.
+-   **Comprehensive Analysis**: Scans both **active** and **archived** threads to ensure no popular post is missed.
+-   **Smart Counting**: Counts only the primary reaction (the forum's default emoji) on the initial post of each thread.
+    -   *Note: The target Forum Channel MUST have a "Default Reaction Emoji" configured in Discord settings.*
+-   **Pagination**: Automatically splits large reports into chunks of 50 to bypass Discord message limits.
 -   Accessible only to server moderators.
 
 ## Setup Instructions
@@ -129,14 +132,4 @@ discord-forum-bot/
 │       ├── message-formatter.js
 │       └── report-generator.js
 └── README.md
-```
-
-## Running Tests
-
-To run unit tests (requires Jest to be installed: `npm install --save-dev jest`):
-
-```bash
-npx jest
-# Or to run specific tests:
-npx jest src/commands/forum-rank.test.js
 ```
