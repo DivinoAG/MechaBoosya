@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ChannelType, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, ChannelType, MessageFlags, PermissionsBitField } = require('discord.js');
 const { fetchForumThreads, fetchInitialMessage } = require('../utils/discord-api');
 const { generateReportString } = require('../utils/report-generator');
 const { formatDiscordMessage } = require('../utils/message-formatter');
@@ -28,7 +28,7 @@ module.exports = {
         if (!interaction.memberPermissions.has('MANAGE_CHANNELS')) {
             return interaction.reply({
                 content: 'You do not have permission to use this command.',
-                flags: [MessageFlags.Ephemeral],
+                ephemeral: true,
             });
         }
 
@@ -39,11 +39,19 @@ module.exports = {
         if (channel.type !== ChannelType.GuildForum) {
             return interaction.reply({
                 content: 'The selected channel is not a forum channel. Please select a forum channel.',
-                flags: [MessageFlags.Ephemeral],
+                ephemeral: true,
             });
         }
 
-        await interaction.deferReply({ flags: directMessage ? [MessageFlags.Ephemeral] : [] });
+        const botPermissions = channel.permissionsFor(interaction.client.user);
+        if (!botPermissions.has(PermissionsBitField.Flags.ViewChannel) || !botPermissions.has(PermissionsBitField.Flags.ReadMessageHistory)) {
+            return interaction.reply({
+                content: 'I need "View Channel" and "Read Message History" permissions in the selected forum channel to work properly.',
+                ephemeral: true,
+            });
+        }
+
+        await interaction.deferReply({ ephemeral: directMessage });
 
         try {
             console.log('Fetching forum threads...');
@@ -55,7 +63,7 @@ module.exports = {
             if (!defaultReactionEmoji) {
                 await interaction.editReply({
                     content: `The forum channel "${channel.name}" does not have a default reaction emoji configured. Cannot process top posts.`,
-                    flags: [MessageFlags.Ephemeral],
+                    ephemeral: true,
                 });
                 return;
             }
@@ -112,14 +120,14 @@ module.exports = {
 
             // If the message was a DM, send a confirmation.
             if (directMessage) {
-                await interaction.editReply({ content: 'Report sent to your DMs.', flags: [MessageFlags.Ephemeral] });
+                await interaction.editReply({ content: 'Report sent to your DMs.', ephemeral: true });
             }
 
         } catch (error) {
             console.error('Error processing top-posts command:', error);
             await interaction.editReply({
                 content: 'An error occurred while processing your request. Please try again later.',
-                flags: [MessageFlags.Ephemeral],
+                ephemeral: true,
             });
         }
     },
