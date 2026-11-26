@@ -1,6 +1,6 @@
 'use strict';
 
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('node:path');
 const { ACCENT } = require('./theme');
 
@@ -8,6 +8,8 @@ const BIRTHDAY_IMAGE_NAME = 'birthday.png';
 const BIRTHDAY_IMAGE_PATH = path.join(__dirname, '..', '..', 'img', BIRTHDAY_IMAGE_NAME);
 const DEFAULT_TIMEZONE = process.env.BIRTHDAY_DEFAULT_TIMEZONE || 'UTC';
 const ANNOUNCE_AFTER_MINUTE = Number(process.env.BIRTHDAY_ANNOUNCE_MINUTE_OF_DAY || 5); // 00:05 local
+const PAGE_SIZE = Number(process.env.BIRTHDAY_PAGE_SIZE || 10);
+const MAX_PAGE_BUTTONS = 25;
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -92,6 +94,45 @@ function groupByMonth(entries) {
     }));
 }
 
+// Fixed-size pages of the sorted list; month headers repeat per page so each page reads alone.
+function buildListPages(entries, pageSize = PAGE_SIZE) {
+    const sorted = [...entries].sort((a, b) => a.month - b.month || a.day - b.day);
+    const size = Math.max(1, pageSize);
+    const pages = [];
+    for (let i = 0; i < sorted.length; i += size) {
+        const slice = sorted.slice(i, i + size);
+        pages.push({ items: slice, groups: groupByMonth(slice) });
+    }
+    return pages.length > 0 ? pages : [{ items: [], groups: [] }];
+}
+
+// One button per page, active page shown as a disabled primary button (Birthdayy's pattern).
+function pageButtons(page, pageCount) {
+    if (pageCount <= 1) return [];
+
+    let first = 0;
+    let count = pageCount;
+    if (pageCount > MAX_PAGE_BUTTONS) {
+        count = 5;
+        first = Math.min(Math.max(page - 2, 0), pageCount - count);
+    }
+
+    const buttons = [];
+    for (let i = first; i < first + count; i++) {
+        buttons.push(new ButtonBuilder()
+            .setCustomId(`blist:${i}`)
+            .setLabel(String(i + 1))
+            .setStyle(i === page ? ButtonStyle.Primary : ButtonStyle.Secondary)
+            .setDisabled(i === page));
+    }
+
+    const rows = [];
+    for (let i = 0; i < buttons.length; i += 5) {
+        rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+    }
+    return rows;
+}
+
 function announcementMessage(userId) {
     const embed = new EmbedBuilder()
         .setColor(ACCENT)
@@ -106,23 +147,29 @@ function announcementMessage(userId) {
     };
 }
 
-// Server-wide list: hint line, month-grouped entries, the same art as the announcement.
-function birthdayListMessage(guildName, entries) {
-    const body = groupByMonth(entries)
+// Server-wide list: hint line, one page of month-grouped entries, the announcement art.
+function birthdayListMessage(guildName, entries, { page = 0, pageSize = PAGE_SIZE } = {}) {
+    const pages = buildListPages(entries, pageSize);
+    const current = Math.min(Math.max(page, 0), pages.length - 1);
+    const hint = '➤ Register your Birthday with\n`/birthday register <day> <month> [year]`';
+    const body = pages[current].groups
         .map(group => `**${group.label}**\n${group.text}`)
         .join('\n\n');
-    const description = `➤ Register your Birthday with\n\`/birthday register <day> <month> [year]\`\n\n${body}`;
+    const description = `${hint}\n\n${body}`;
 
     const embed = new EmbedBuilder()
         .setColor(ACCENT)
         .setTitle(`Birthday List - ${guildName}`)
         .setDescription(description.length > 4096 ? `${description.slice(0, 4095)}…` : description)
         .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
-        .setFooter({ text: `${entries.length} birthday(s) registered` });
+        .setFooter({ text: `${entries.length} birthday(s) registered · Page ${current + 1}/${pages.length}` });
 
     return {
         embeds: [embed],
         files: [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }],
+        components: pageButtons(current, pages.length),
+        page: current,
+        pageCount: pages.length,
     };
 }
 
@@ -130,6 +177,7 @@ module.exports = {
     ACCENT,
     DEFAULT_TIMEZONE,
     ANNOUNCE_AFTER_MINUTE,
+    PAGE_SIZE,
     MONTHS,
     daysInMonth,
     isLeapYear,
@@ -140,6 +188,8 @@ module.exports = {
     matchesToday,
     formatBirthday,
     groupByMonth,
+    buildListPages,
+    pageButtons,
     announcementMessage,
     birthdayListMessage,
 };

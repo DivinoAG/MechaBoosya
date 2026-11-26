@@ -2,6 +2,7 @@
 
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
+const { notify } = require('../utils/guild-log');
 const {
     isValidDate, formatBirthday, announcementMessage, birthdayListMessage,
 } = require('../utils/birthday');
@@ -59,7 +60,24 @@ module.exports = {
             if (entries.length === 0) {
                 return interaction.reply({ content: 'No birthdays registered in this server yet.', ephemeral: true });
             }
-            return interaction.reply(birthdayListMessage(interaction.guild.name, entries));
+
+            const payload = birthdayListMessage(interaction.guild.name, entries);
+            const message = await interaction.reply({ ...payload, fetchReply: true });
+            if (payload.pageCount <= 1) return;
+
+            const collector = message.createMessageComponentCollector({ time: 5 * 60_000 });
+            collector.on('collect', async button => {
+                if (button.user.id !== interaction.user.id) {
+                    return button.reply({ content: 'Run `/birthday list` for your own copy.', ephemeral: true });
+                }
+                const page = Number(button.customId.split(':')[1]) || 0;
+                const fresh = store.listBirthdays(guildId);
+                await button.update(birthdayListMessage(interaction.guild.name, fresh, { page }));
+            });
+            collector.on('end', async () => {
+                await message.edit({ components: [] }).catch(() => {});
+            });
+            return;
         }
 
         if (sub === 'test') {
@@ -95,6 +113,9 @@ module.exports = {
                 return interaction.reply({ content: 'Manage Server permission required to remove someone else\'s birthday.', ephemeral: true });
             }
             const removed = store.deleteBirthday(guildId, user.id);
+            if (removed) {
+                await notify(interaction.client, store, guildId, `🗑️ ${user.tag} — birthday removed by ${interaction.user.tag}`);
+            }
             return interaction.reply({
                 content: removed
                     ? (isSelf ? 'Your birthday was removed.' : `Removed the birthday of <@${user.id}>.`)
@@ -127,6 +148,10 @@ module.exports = {
         store.upsertBirthday({ guildId, userId: user.id, month, day, year });
 
         const formatted = formatBirthday({ month, day, year });
+        await notify(
+            interaction.client, store, guildId,
+            `📝 ${user.tag} — birthday ${existing ? 'updated' : 'registered'} to ${formatted} by ${interaction.user.tag}`
+        );
         return interaction.reply({
             content: isSelf
                 ? `Birthday saved: **${formatted}**.`

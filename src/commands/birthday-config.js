@@ -30,7 +30,19 @@ module.exports = {
         .addSubcommand(s => s
             .setName('timezone')
             .setDescription('Time zone used to decide which day it is')
-            .addStringOption(o => o.setName('value').setDescription('IANA name, e.g. America/Sao_Paulo (default UTC)').setRequired(true))),
+            .addStringOption(o => o.setName('value').setDescription('IANA name, e.g. America/Sao_Paulo (default UTC)').setRequired(true)))
+        .addSubcommand(s => s
+            .setName('birthday-role')
+            .setDescription('Role given to members on their birthday, removed the next day')
+            .addRoleOption(o => o.setName('role').setDescription('Leave empty to stop using a role').setRequired(false)))
+        .addSubcommand(s => s
+            .setName('log-channel')
+            .setDescription('Channel where birthday changes are logged')
+            .addChannelOption(o => o
+                .setName('channel')
+                .setDescription('Leave empty to disable logging')
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+                .setRequired(false))),
 
     async execute(interaction) {
         if (!managerOnly(interaction)) {
@@ -46,6 +58,8 @@ module.exports = {
             const lines = [
                 `**Announcement channel:** ${settings.announcement_channel ? `<#${settings.announcement_channel}>` : 'not set (announcements disabled)'}`,
                 `**Ping role:** ${settings.ping_role ? `<@&${settings.ping_role}>` : 'none'}`,
+                `**Birthday role:** ${settings.birthday_role ? `<@&${settings.birthday_role}>` : 'none'}`,
+                `**Log channel:** ${settings.log_channel ? `<#${settings.log_channel}>` : 'none'}`,
                 `**Timezone:** ${settings.timezone || `${DEFAULT_TIMEZONE} (default)`}`,
                 `**Registered birthdays:** ${store.listBirthdays(guildId).length}`,
                 `**Announcement time:** 00:05 local time`,
@@ -70,6 +84,26 @@ module.exports = {
             store.setSetting(guildId, 'ping_role', role ? role.id : null);
             return interaction.reply({
                 content: role ? `Announcements will ping <@&${role.id}>.` : 'Role ping disabled.',
+                ephemeral: true,
+            });
+        }
+
+        if (sub === 'birthday-role') {
+            const role = interaction.options.getRole('role');
+            store.setSetting(guildId, 'birthday_role', role ? role.id : null);
+            return interaction.reply({
+                content: role
+                    ? `Members will receive <@&${role.id}> on their birthday. Keep the bot's role above it, or assignment will fail.`
+                    : 'Birthday role disabled.',
+                ephemeral: true,
+            });
+        }
+
+        if (sub === 'log-channel') {
+            const channel = interaction.options.getChannel('channel');
+            store.setSetting(guildId, 'log_channel', channel ? channel.id : null);
+            return interaction.reply({
+                content: channel ? `Birthday changes will be logged in <#${channel.id}>.` : 'Logging disabled.',
                 ephemeral: true,
             });
         }
