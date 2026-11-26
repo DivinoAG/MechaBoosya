@@ -35,7 +35,7 @@ function createDispatcher({ commands, store, log = console, listButton = handleL
 
         if (!interaction.isChatInputCommand?.()) return;
 
-        const context = `[cmd] /${interaction.commandName} user=${interaction.user?.id} guild=${interaction.guildId} channel=${interaction.channelId}`;
+        const context = `[cmd] /${interaction.commandName} user=${interaction.user?.id}(${interaction.user?.username ?? 'unknown'}) guild=${interaction.guildId} channel=${interaction.channelId}`;
 
         if (draining) {
             log.warn(`${context} rejected: draining`);

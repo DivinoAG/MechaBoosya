@@ -24,6 +24,11 @@ function progressText(channelName, done, total, elapsedMs) {
     return `🔍 Scanning #${channelName} — ${done} / ${total} posts (${pct}%) · ${formatDuration(elapsedMs)}`;
 }
 
+// Who asked, with a name next to the id so a log line read from Dockge is legible.
+function requester(interaction) {
+    return `user=${interaction.user?.id ?? 'unknown'}(${interaction.user?.username ?? 'unknown'})`;
+}
+
 // Shared by /forum-rank and /forum-rank-force so the two stay identical.
 function addRankingOptions(builder) {
     return builder
@@ -142,16 +147,16 @@ async function runRanking(interaction, { force = false } = {}) {
 
         if (cached) {
             threadData = cached.payload.threads;
-            console.log(`Serving cached ranking for ${channel.id}, ${formatAge(cached.ageMs)} old (${threadData.length} posts)`);
+            console.log(`Serving cached ranking for ${channel.id}, ${formatAge(cached.ageMs)} old (${threadData.length} posts) — ${requester(interaction)}`);
         } else {
-            console.log(`Fetching forum threads... (triggered by /${force ? 'forum-rank-force' : 'forum-rank'} user=${interaction.user.id} channel=${channel.name}(${channel.id}))`);
+            console.log(`Fetching forum threads... (triggered by /${force ? 'forum-rank-force' : 'forum-rank'} ${requester(interaction)} channel=${channel.name}(${channel.id}))`);
 
             // A second caller joins the scan already in flight and renders identical progress.
             const { state, joined } = scans.join(channel.id, progress => scanForum(channel, progress, {
                 requestedBy: interaction.user.id,
                 limit: numberOfPosts || null,
             }));
-            if (joined) console.log(`Joined the running scan for ${channel.id}`);
+            if (joined) console.log(`Joined the running scan for ${channel.id} — ${requester(interaction)}`);
 
             const rendering = renderProgress({
                 interaction,
@@ -202,4 +207,4 @@ async function runRanking(interaction, { force = false } = {}) {
     }
 }
 
-module.exports = { runRanking, addRankingOptions, progressText, CACHE_TTL_MS };
+module.exports = { runRanking, addRankingOptions, progressText, requester, CACHE_TTL_MS };

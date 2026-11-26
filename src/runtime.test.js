@@ -171,3 +171,17 @@ test('interactions that are neither commands nor our buttons are ignored', async
     await dispatcher.handle({ isButton: () => false, isChatInputCommand: () => false });
     assert.strictEqual(dispatcher.activeCount, 0);
 });
+
+test('the command log names the user, not just the id', async () => {
+    const log = fakeLog();
+    const { commands } = loadCommands(tempCommandsDir({
+        'a.js': 'module.exports = { data: { name: "a" }, execute() {} };',
+    }));
+
+    const dispatcher = createDispatcher({ commands, store: {}, log });
+    const interaction = commandInteraction('a');
+    interaction.user = { id: 'u1', username: 'kemwer' };
+    await dispatcher.handle(interaction);
+
+    assert.ok(log.lines.some(l => l.includes('user=u1(kemwer)')), `got: ${log.lines.join(' | ')}`);
+});
