@@ -2,6 +2,7 @@
 
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
+const { ACCENT } = require('../utils/theme');
 const {
     isValidDate, formatBirthday, groupByMonth, announcementMessage, MONTHS,
 } = require('../utils/birthday');
@@ -64,7 +65,7 @@ module.exports = {
                 .map(g => `**${g.label}**\n${g.text}`)
                 .join('\n\n');
             const embed = {
-                color: 0xbAd7e6,
+                color: ACCENT,
                 title: 'Birthday List',
                 description: description.length > 4096 ? description.slice(0, 4093) + '…' : description,
                 footer: { text: `${entries.length} birthday(s) registered` },

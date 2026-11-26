@@ -2,6 +2,7 @@
 
 const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
+const { ACCENT } = require('../utils/theme');
 const { DEFAULT_TIMEZONE, isValidTimeZone } = require('../utils/birthday');
 
 function managerOnly(interaction) {
@@ -50,7 +51,7 @@ module.exports = {
                 `**Announcement time:** 00:05 local time`,
             ];
             return interaction.reply({
-                embeds: [{ color: 0xbAd7e6, title: 'Birthday Configuration', description: lines.join('\n') }],
+                embeds: [{ color: ACCENT, title: 'Birthday Configuration', description: lines.join('\n') }],
                 ephemeral: true,
             });
         }

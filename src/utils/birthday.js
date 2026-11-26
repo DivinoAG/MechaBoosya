@@ -2,8 +2,8 @@
 
 const { EmbedBuilder } = require('discord.js');
 const path = require('node:path');
+const { ACCENT } = require('./theme');
 
-const ACCENT = 0xbAd7e6; // MechaBoosya identity
 const BIRTHDAY_IMAGE_NAME = 'birthday.png';
 const BIRTHDAY_IMAGE_PATH = path.join(__dirname, '..', '..', 'img', BIRTHDAY_IMAGE_NAME);
 const DEFAULT_TIMEZONE = process.env.BIRTHDAY_DEFAULT_TIMEZONE || 'UTC';
