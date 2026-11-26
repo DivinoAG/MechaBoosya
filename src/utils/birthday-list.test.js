@@ -39,11 +39,13 @@ test('carries the birthday art as an attachment thumbnail', () => {
     assert.strictEqual(message.embeds[0].data.color, 0xbAd7e6);
 });
 
-test('single page has no buttons and says page 1/1', () => {
+test('single page shows only the refresh button and says page 1/1', () => {
     const message = birthdayListMessage('Server', entries);
 
     assert.strictEqual(message.pageCount, 1);
-    assert.deepStrictEqual(message.components, []);
+    // Scope change: one page still needs a way to pick up birthdays added since it was posted.
+    const ids = message.components.flatMap(row => row.components.map(c => c.data.custom_id));
+    assert.deepStrictEqual(ids, ['blist:refresh:0']);
     assert.strictEqual(message.embeds[0].data.footer.text, '3 birthday(s) registered · Page 1/1');
 });
 
@@ -76,8 +78,10 @@ test('a short list stays on a single page', () => {
 test('page buttons number the pages and mark the active one disabled', () => {
     const buttons = pageButtons(1, 3)[0].components;
 
-    assert.deepStrictEqual(buttons.map(b => b.data.label), ['1', '2', '3']);
-    assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:0', 'blist:1', 'blist:2']);
+    // Scope change: the refresh button shares the row, so compare ids and the labelled subset.
+    assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:0', 'blist:1', 'blist:2', 'blist:refresh:1']);
+    const numbered = buttons.filter(b => b.data.label);
+    assert.deepStrictEqual(numbered.map(b => b.data.label), ['1', '2', '3']);
     assert.strictEqual(buttons[1].data.disabled, true);
     assert.strictEqual(buttons[1].data.style, 1); // Primary
     assert.strictEqual(buttons[0].data.style, 2); // Secondary

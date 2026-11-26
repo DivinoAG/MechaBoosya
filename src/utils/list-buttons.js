@@ -10,7 +10,9 @@ async function handleListButton(interaction, store) {
         return interaction.reply({ content: 'This list only works inside a server.', flags: MessageFlags.Ephemeral });
     }
 
-    const page = Number(interaction.customId.split(':')[1]) || 0;
+    // 'blist:3' selects page 3; 'blist:refresh:3' re-renders page 3 from current data.
+    const [, kind, arg] = interaction.customId.split(':');
+    const page = kind === 'refresh' ? Number(arg) || 0 : Number(kind) || 0;
     const entries = store.listBirthdays(interaction.guildId);
 
     if (entries.length === 0) {
