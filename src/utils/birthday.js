@@ -1,8 +1,11 @@
 'use strict';
 
 const { EmbedBuilder } = require('discord.js');
+const path = require('node:path');
 
 const ACCENT = 0xbAd7e6; // MechaBoosya identity
+const BIRTHDAY_IMAGE_NAME = 'birthday.png';
+const BIRTHDAY_IMAGE_PATH = path.join(__dirname, '..', '..', 'img', BIRTHDAY_IMAGE_NAME);
 const DEFAULT_TIMEZONE = process.env.BIRTHDAY_DEFAULT_TIMEZONE || 'UTC';
 const ANNOUNCE_AFTER_MINUTE = Number(process.env.BIRTHDAY_ANNOUNCE_MINUTE_OF_DAY || 5); // 00:05 local
 
@@ -89,14 +92,18 @@ function groupByMonth(entries) {
     }));
 }
 
-function announcementMessage(userId, { withYear = true } = {}) {
+function announcementMessage(userId) {
     const embed = new EmbedBuilder()
         .setColor(ACCENT)
         .setTitle('🎂 Happy Birthday!')
         .setDescription(`Today is a special day!\n🎁 Please wish <@${userId}> a happy birthday!`)
-        .setFooter({ text: withYear ? `MechaBoosya • ${new Date().toISOString().slice(0, 10)}` : 'MechaBoosya' });
+        .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
+        .setFooter({ text: `MechaBoosya • ${new Date().toISOString().slice(0, 10)}` });
 
-    return { embeds: [embed] };
+    return {
+        embeds: [embed],
+        files: [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }],
+    };
 }
 
 module.exports = {

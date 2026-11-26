@@ -2,10 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
 
 const {
     isLeapYear, isValidDate, isValidTimeZone, zonedParts, dateKey,
-    matchesToday, formatBirthday, groupByMonth, daysInMonth,
+    matchesToday, formatBirthday, groupByMonth, daysInMonth, announcementMessage,
 } = require('./birthday');
 
 test('leap years follow the gregorian rule', () => {
@@ -64,4 +65,14 @@ test('timezone validation accepts IANA names only', () => {
     assert.ok(isValidTimeZone('UTC'));
     assert.ok(!isValidTimeZone('Mars/Olympus'));
     assert.ok(!isValidTimeZone(''));
+});
+
+test('announcement embeds the bundled image as an attachment', () => {
+    const message = announcementMessage('123456789');
+
+    assert.strictEqual(message.embeds[0].data.thumbnail.url, 'attachment://birthday.png');
+    assert.strictEqual(message.files[0].name, 'birthday.png');
+    assert.ok(fs.existsSync(message.files[0].attachment), 'img/birthday.png must ship in the repo');
+    assert.match(message.embeds[0].data.description, /<@123456789>/);
+    assert.strictEqual(message.embeds[0].data.color, 0xbAd7e6);
 });
