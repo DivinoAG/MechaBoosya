@@ -10,9 +10,12 @@ function managerOnly(interaction) {
 }
 
 // A channel the bot cannot post in is worse than no channel: it fails later, silently, at the
-// moment an announcement is due.
-function canPostIn(interaction, channel) {
-    const perms = channel.permissionsFor?.(interaction.guild?.members?.me);
+// moment an announcement is due. The member cache can be cold, so fall back to fetching it —
+// trusting `members.me` alone would refuse a perfectly good channel.
+async function canPostIn(interaction, channel) {
+    const guild = interaction.guild;
+    const me = guild?.members?.me ?? await guild?.members?.fetchMe?.().catch(() => null);
+    const perms = channel.permissionsFor?.(me);
     return Boolean(perms?.has([PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]));
 }
 
@@ -104,7 +107,7 @@ module.exports = {
 
         if (sub === 'announcement-channel') {
             const channel = interaction.options.getChannel('channel');
-            if (channel && !canPostIn(interaction, channel)) return unreachable(interaction, channel);
+            if (channel && !(await canPostIn(interaction, channel))) return unreachable(interaction, channel);
             store.setSetting(guildId, 'announcement_channel', channel ? channel.id : null);
             return interaction.reply({
                 content: channel ? `Announcements will be posted in <#${channel.id}>.` : 'Announcements disabled (no channel set).',
@@ -128,7 +131,7 @@ module.exports = {
             if (mode === 'custom' && !channel) {
                 return interaction.reply({ content: 'Pick a channel when using custom mode.', flags: MessageFlags.Ephemeral });
             }
-            if (mode === 'custom' && !canPostIn(interaction, channel)) return unreachable(interaction, channel);
+            if (mode === 'custom' && !(await canPostIn(interaction, channel))) return unreachable(interaction, channel);
 
             store.setSetting(guildId, 'monthly_mode', mode);
             store.setSetting(guildId, 'monthly_channel', mode === 'custom' ? channel.id : null);
@@ -155,7 +158,7 @@ module.exports = {
 
         if (sub === 'log-channel') {
             const channel = interaction.options.getChannel('channel');
-            if (channel && !canPostIn(interaction, channel)) return unreachable(interaction, channel);
+            if (channel && !(await canPostIn(interaction, channel))) return unreachable(interaction, channel);
             store.setSetting(guildId, 'log_channel', channel ? channel.id : null);
             return interaction.reply({
                 content: channel ? `Birthday changes will be logged in <#${channel.id}>.` : 'Logging disabled.',

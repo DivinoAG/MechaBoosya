@@ -148,3 +148,19 @@ test('a usable channel is saved', async () => {
     assert.match(i.replies[0].content, /Announcements will be posted/);
     assert.strictEqual(store.getSetting(i.guildId, 'announcement_channel'), 'c1');
 });
+
+test('the bot member is fetched when the guild cache has not filled yet', async () => {
+    let fetched = 0;
+    const me = { id: 'bot' };
+    const channel = fakeChannel();
+
+    const i = interaction({ sub: 'announcement-channel', values: { channel } });
+    i.guild.members = { me: null, fetchMe: async () => { fetched += 1; return me; } };
+    channel.permissionsFor = member => ({ has: () => member === me });
+
+    await birthdayConfig.execute(i);
+
+    assert.strictEqual(fetched, 1, 'fetched once instead of trusting a null cache');
+    assert.match(i.replies[0].content, /Announcements will be posted/);
+    assert.strictEqual(store.getSetting(i.guildId, 'announcement_channel'), 'c1');
+});
