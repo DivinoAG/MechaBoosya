@@ -27,9 +27,11 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 | `utils/logger.js` | yes | format, rotation, unwritable dir |
 | `utils/list-buttons.js` | yes | paging by custom id, empty registry |
 | `utils/message-formatter.js` | yes | accent colour, footer, truncation |
-| `commands/*.js` | no | permission gating and option handling untested |
+| `commands/birthday.js` | yes | permission gating, self vs manager edits, duplicate and invalid dates |
+| `commands/birthday-config.js` | yes | gating, timezone validation, monthly mode, channel reachability |
+| `commands/forum-rank*.js`, `help.js` | no | permission gating untested |
 | `index.js` | no | command loader, interaction routing, SIGTERM drain |
-| `supervisor.js` | no | deploy transaction, rollback, health, crash recovery |
+| `supervisor.js` | yes | deploy transaction, rollback, auth, crash recovery |
 | `utils/discord-api.js` | no | thread/message fetching primitives |
 
 ## Before touching these, add the test
