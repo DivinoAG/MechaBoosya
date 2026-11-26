@@ -222,7 +222,7 @@ function announcementMessage(userId) {
 }
 
 // Server-wide list: hint line, one page of month-grouped entries, the announcement art.
-function birthdayListMessage(guildName, entries, { page = 0 } = {}) {
+function birthdayListMessage(guildName, entries, { page = 0, imageUrl = null } = {}) {
     const pages = buildListPages(entries);
     const current = Math.min(Math.max(page, 0), pages.length - 1);
     const hint = '➤ Register your Birthday with\n`/birthday register <day> <month> [year]`';
@@ -235,16 +235,20 @@ function birthdayListMessage(guildName, entries, { page = 0 } = {}) {
         .setColor(ACCENT)
         .setTitle(`Birthday List - ${guildName}`)
         .setDescription(description.length > 4096 ? `${description.slice(0, 4095)}…` : description)
-        .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
+        .setThumbnail(imageUrl ?? `attachment://${BIRTHDAY_IMAGE_NAME}`)
         .setFooter({ text: `${entries.length} birthday(s) registered · Page ${current + 1}/${pages.length}` });
 
-    return {
+    const message = {
         embeds: [embed],
-        files: [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }],
         components: pageButtons(current, pages.length),
         page: current,
         pageCount: pages.length,
     };
+
+    // Editing an existing message keeps its attachment; only a fresh post uploads the file.
+    if (!imageUrl) message.files = [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }];
+
+    return message;
 }
 
 module.exports = {

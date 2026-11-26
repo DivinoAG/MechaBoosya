@@ -6,14 +6,21 @@ const assert = require('node:assert');
 const { handleListButton } = require('./list-buttons');
 const { openStore } = require('./birthday-store');
 
-function fakeInteraction(customId, { guild = true, entries = [] } = {}) {
-    const calls = { update: null, reply: null };
+function fakeInteraction(customId, { guild = true, entries = [], attachmentUrl = null } = {}) {
+    const calls = { update: null, reply: null, order: [] };
     return {
         calls,
         customId,
         guildId: 'g1',
         guild: guild ? { name: 'Irina Meier - Official Discord' } : null,
-        async update(payload) { calls.update = payload; },
+        message: {
+            attachments: attachmentUrl
+                ? { first: () => ({ name: 'birthday.png', url: attachmentUrl }) }
+                : { first: () => null },
+        },
+        // Acknowledging and rendering are separate calls now: the ack must come first.
+        async deferUpdate() { calls.order.push('defer'); },
+        async editReply(payload) { calls.order.push('edit'); calls.update = payload; },
         async reply(payload) { calls.reply = payload; },
         store: (() => {
             const store = openStore(':memory:');
@@ -111,4 +118,32 @@ test('a page past the end clamps to the last page instead of rendering empty', a
     const [, page, total] = footer.match(/Page (\d+)\/(\d+)/);
     assert.strictEqual(page, total, 'clamped to the last page');
     assert.ok(interaction.calls.update.embeds[0].data.description.length > 100, 'the page has content');
+});
+
+test('the click is acknowledged before the list is rebuilt', async () => {
+    const interaction = fakeInteraction('blist:refresh:0', { entries: [{ userId: 'u1', month: 5, day: 4 }] });
+    await handleListButton(interaction, interaction.store);
+
+    assert.deepStrictEqual(interaction.calls.order, ['defer', 'edit'], 'the ack must not wait on the rebuild');
+});
+
+test('the image already on the message is reused instead of re-uploaded', async () => {
+    const interaction = fakeInteraction('blist:refresh:0', {
+        entries: [{ userId: 'u1', month: 5, day: 4 }],
+        attachmentUrl: 'https://cdn.discordapp.com/attachments/1/2/birthday.png',
+    });
+    await handleListButton(interaction, interaction.store);
+
+    const payload = interaction.calls.update;
+    assert.strictEqual(payload.files, undefined, 'no upload on a button click');
+    assert.strictEqual(payload.embeds[0].data.thumbnail.url, 'https://cdn.discordapp.com/attachments/1/2/birthday.png');
+});
+
+test('a list that has no image yet still uploads one', async () => {
+    const interaction = fakeInteraction('blist:0', { entries: [{ userId: 'u1', month: 5, day: 4 }] });
+    await handleListButton(interaction, interaction.store);
+
+    const payload = interaction.calls.update;
+    assert.strictEqual(payload.files[0].name, 'birthday.png');
+    assert.strictEqual(payload.embeds[0].data.thumbnail.url, 'attachment://birthday.png');
 });
