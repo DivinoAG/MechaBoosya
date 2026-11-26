@@ -29,24 +29,21 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 | `utils/message-formatter.js` | yes | accent colour, footer, truncation |
 | `commands/birthday.js` | yes | permission gating, self vs manager edits, duplicate and invalid dates |
 | `commands/birthday-config.js` | yes | gating, timezone validation, monthly mode, channel reachability |
-| `commands/forum-rank*.js`, `help.js` | no | permission gating untested |
+| `commands/forum-rank*.js`, `help.js` | yes | permission gating; the scan flow itself is exercised only through the container |
 | `runtime.js` | yes | loader skips, unknown command, failure replies, drain refusal, button routing |
 | `index.js` | no | discord.js wiring only; the logic it used to hold now lives in `runtime.js` |
 | `supervisor.js` | yes | deploy transaction, rollback, auth, crash recovery |
-| `utils/discord-api.js` | no | thread/message fetching primitives |
+| `utils/discord-api.js` | yes | forum type check, active+archived merge, pagination cursor, dedupe, starter-message failure |
 
 ## Before touching these, add the test
 
-1. `supervisor.js` — a wrong rollback leaves the bot on broken code with no way back. Cover the
-   deploy transaction end to end against a throwaway git repo: healthy start, rejected auth,
-   successful deploy, syntax error → rollback, child still running.
-2. `commands/*.js` — permission gating is a security boundary. Cover: a member without
-   Manage Server cannot edit someone else's birthday, cannot change config, cannot force a
-   rescan; invalid dates are rejected; duplicate registration is refused.
-3. `index.js` — the loader silently skipping a command, or the drain never finishing, is
-   invisible until a user hits it.
-4. `utils/discord-api.js` — ranking correctness depends on fetching every active and archived
-   thread and reading the right reaction.
+Everything on the critical paths now has a test. Two behaviours remain uncovered by choice, and
+a change there needs one added first:
+
+1. `src/index.js` — the discord.js wiring: login, `rest.put` registration, the SIGTERM drain loop.
+   Provable only against a real gateway or a fake Client; the counter it waits on is tested.
+2. `utils/ranking.js` — the cached scan flow (freshness window, `force`, progress edits). The
+   permission gate and the formatter are covered; the orchestration is not.
 
 ## Running them
 

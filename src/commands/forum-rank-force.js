@@ -10,7 +10,7 @@ module.exports = {
             .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageGuild)
     ),
     async execute(interaction) {
-        if (!interaction.memberPermissions.has(PermissionsBitField.Flags.ManageGuild)) {
+        if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild)) {
             return interaction.reply({
                 content: 'Rescanning requires the Manage Server permission.',
                 flags: MessageFlags.Ephemeral,

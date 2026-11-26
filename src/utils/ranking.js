@@ -47,7 +47,7 @@ function formatAge(ms) {
 }
 
 async function runRanking(interaction, { force = false } = {}) {
-    if (!interaction.memberPermissions.has('MANAGE_CHANNELS')) {
+    if (!interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
         return interaction.reply({
             content: 'You do not have permission to use this command.',
             flags: MessageFlags.Ephemeral,
