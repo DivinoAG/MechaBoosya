@@ -2,13 +2,19 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DEFAULT_TIMEZONE, ANNOUNCE_AFTER_MINUTE, zonedParts, dateKey, matchesToday, announcementMessage, isLastDayOfMonth, nextMonth, monthlyAction, monthlyMessage, MONTHS } = require('./birthday');
+const { DEFAULT_TIMEZONE, zonedParts, dateKey, announcementMessage, isAnnounceWindowOpen, dueBirthdays, isLastDayOfMonth, nextMonth, monthlyAction, monthlyMessage, MONTHS } = require('./birthday');
 const { pruneExports } = require('./exports');
 const { notify } = require('./guild-log');
 
 // Posts today's birthdays once per person (unique row = idempotent) and keeps a daily DB snapshot.
 // Local time is what counts: a boot at 14:00 still announces, hence same-day catch-up for free.
-function startBirthdayScheduler(client, { store, guildId, exportDir = process.env.EXPORT_DIR, intervalMs = 60_000 }) {
+function startBirthdayScheduler(client, {
+    store, guildId,
+    exportDir = process.env.EXPORT_DIR,
+    intervalMs = 60_000,
+    now = () => new Date(),
+    runOnStart = true,
+}) {
     let busy = false;
     let lastSnapshot = null;
     let lastRoleSync = null;
@@ -126,20 +132,23 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
     async function tick() {
         const settings = store.allSettings(guildId);
         const timeZone = settings.timezone || DEFAULT_TIMEZONE;
-        const now = zonedParts(new Date(), timeZone);
+        const parts = zonedParts(now(), timeZone);
 
-        if (now.hour * 60 + now.minute < ANNOUNCE_AFTER_MINUTE) return;
+        if (!isAnnounceWindowOpen(parts)) return;
 
-        const key = dateKey(now);
+        const key = dateKey(parts);
 
-        const candidates = [...store.birthdaysOn(guildId, now.month, now.day)];
-        if (now.month === 3 && now.day === 1) candidates.push(...store.birthdaysOn(guildId, 2, 29));
+        const candidates = [...store.birthdaysOn(guildId, parts.month, parts.day)];
+        if (parts.month === 3 && parts.day === 1) candidates.push(...store.birthdaysOn(guildId, 2, 29));
 
         const celebrants = new Set();
 
-        for (const person of candidates) {
-            if (!matchesToday(person, now)) continue;
+        for (const person of dueBirthdays(candidates, parts)) {
             celebrants.add(person.user_id);
+
+            // Checked before sending so a repeated tick cannot post twice; recorded after a
+            // successful send so a failed send is retried on the next tick.
+            if (store.wasAnnounced(guildId, person.user_id, key)) continue;
 
             const channelId = settings.announcement_channel;
             if (!channelId) break;
@@ -169,7 +178,7 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
             lastRoleSync = key;
         }
 
-        await syncMonthly(settings, now, key);
+        await syncMonthly(settings, parts, key);
 
         if (exportDir && lastSnapshot !== key) {
             try {
@@ -194,7 +203,9 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
     timer.unref();
 
     // Run once at startup: catches up the same day and writes today's snapshot after a deploy.
-    tick().catch(error => console.error('[birthday] initial tick failed:', error.message));
+    if (runOnStart) {
+        tick().catch(error => console.error('[birthday] initial tick failed:', error.message));
+    }
 
     return { stop: () => clearInterval(timer), tick };
 }

@@ -86,6 +86,12 @@ function openStore(file = process.env.DB_PATH || '/data/db/mecha-boosya.sqlite')
             return res.changes > 0;
         },
 
+        wasAnnounced(guildId, userId, eventDate) {
+            return Boolean(db.prepare(
+                'SELECT 1 FROM announcements WHERE guild_id = ? AND user_id = ? AND event_date = ?'
+            ).get(guildId, userId, eventDate));
+        },
+
         getSetting(guildId, key) {
             const row = db.prepare('SELECT value FROM settings WHERE guild_id = ? AND key = ?').get(guildId, key);
             return row ? row.value : null;

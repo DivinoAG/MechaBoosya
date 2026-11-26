@@ -73,6 +73,15 @@ function matchesToday(birthday, todayParts) {
     return leapYearBirthday && nonLeapToday;
 }
 
+function isAnnounceWindowOpen(parts, minuteOfDay = ANNOUNCE_AFTER_MINUTE) {
+    return parts.hour * 60 + parts.minute >= minuteOfDay;
+}
+
+// Everyone whose birthday falls on the given local day (Feb 29 handled by matchesToday).
+function dueBirthdays(entries, parts) {
+    return entries.filter(entry => matchesToday(entry, parts));
+}
+
 function formatBirthday({ month, day, year }) {
     const base = `${String(day).padStart(2, '0')}. ${MONTHS[month - 1]}`;
     return year ? `${base} ${year}` : base;
@@ -245,6 +254,8 @@ module.exports = {
     zonedParts,
     dateKey,
     matchesToday,
+    isAnnounceWindowOpen,
+    dueBirthdays,
     formatBirthday,
     groupByMonth,
     buildListPages,
