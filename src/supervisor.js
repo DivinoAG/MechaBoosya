@@ -136,7 +136,7 @@ async function deploy() {
     const checked = syntaxCheck();
     startChild();
     console.log(`[supervisor] deployed ${headCommit()} (prev ${prevCommit.slice(0, 7)}, ${checked} files checked)`);
-    return { ok: true, commit: headCommit(), prevCommit, npmCiRan };
+    return { ok: true, commit: headCommit(), prevCommit: prevCommit.slice(0, 7), npmCiRan };
   } catch (err) {
     const short = prevCommit ? prevCommit.slice(0, 7) : 'unknown';
     console.error(`[supervisor] deploy failed: ${err.message} — rolling back to ${short}`);
@@ -150,7 +150,7 @@ async function deploy() {
     }
     stopping = false;
     if (!child) startChild();
-    return { ok: false, error: err.message, commit: headCommit(), rolledBackTo: prevCommit };
+    return { ok: false, error: err.message, commit: headCommit(), rolledBackTo: prevCommit ? prevCommit.slice(0, 7) : null };
   }
 }
 
