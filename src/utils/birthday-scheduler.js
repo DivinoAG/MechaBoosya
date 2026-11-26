@@ -57,6 +57,7 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
             const message = await channel.messages.fetch(existing.message_id).catch(() => null);
             if (message) {
                 await message.edit(payload).catch(error => console.error('[monthly] edit failed:', error.message));
+                console.log(`[monthly] refreshed ${MONTHS[targetMonth - 1]} list (${existing.message_id})`);
                 lastMonthlyRefresh = key;
                 return;
             }
