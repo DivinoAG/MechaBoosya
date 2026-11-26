@@ -47,21 +47,34 @@ test('single page has no buttons and says page 1/1', () => {
     assert.strictEqual(message.embeds[0].data.footer.text, '3 birthday(s) registered · Page 1/1');
 });
 
-test('splits long lists into pages of ten, each with its own month headers', () => {
-    const pages = buildListPages(many, 10);
-    assert.strictEqual(pages.length, 3);
-    assert.strictEqual(pages[0].items.length, 10);
-    assert.strictEqual(pages[2].items.length, 3);
-    assert.ok(pages[0].groups.length >= 1);
+test('fills pages to the description budget instead of a fixed count', () => {
+    const long = Array.from({ length: 300 }, (_, i) => ({
+        user_id: '1'.repeat(18) + String(i).padStart(2, '0'),
+        month: (i % 12) + 1,
+        day: (i % 28) + 1,
+        year: null,
+    }));
 
-    const message = birthdayListMessage('Server', many, { page: 1, pageSize: 10 });
-    assert.strictEqual(message.page, 1);
-    assert.strictEqual(message.embeds[0].data.footer.text, '23 birthday(s) registered · Page 2/3');
+    const pages = buildListPages(long);
+    assert.ok(pages.length > 1, 'a 300-entry list needs several pages');
+    assert.strictEqual(pages.flatMap(p => p.items).length, 300, 'no entry is dropped');
+
+    for (let i = 0; i < pages.length; i++) {
+        const description = birthdayListMessage('Server', long, { page: i }).embeds[0].data.description;
+        assert.ok(description.length <= 4096, `page ${i} fits the embed limit (${description.length})`);
+        // Every page except the remainder should be packed close to the budget.
+        if (i < pages.length - 1) {
+            assert.ok(description.length > 3000, `page ${i} is densely filled (${description.length})`);
+        }
+    }
+});
+
+test('a short list stays on a single page', () => {
+    assert.strictEqual(buildListPages(entries).length, 1);
 });
 
 test('page buttons number the pages and mark the active one disabled', () => {
-    const rows = pageButtons(1, 3);
-    const buttons = rows[0].components;
+    const buttons = pageButtons(1, 3)[0].components;
 
     assert.deepStrictEqual(buttons.map(b => b.data.label), ['1', '2', '3']);
     assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:0', 'blist:1', 'blist:2']);
@@ -71,6 +84,6 @@ test('page buttons number the pages and mark the active one disabled', () => {
 });
 
 test('out-of-range pages clamp to the last page', () => {
-    const message = birthdayListMessage('Server', many, { page: 99, pageSize: 10 });
-    assert.strictEqual(message.page, 2);
+    const message = birthdayListMessage('Server', many, { page: 99 });
+    assert.strictEqual(message.page, message.pageCount - 1);
 });

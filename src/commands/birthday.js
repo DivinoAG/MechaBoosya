@@ -62,22 +62,8 @@ module.exports = {
             }
 
             const payload = birthdayListMessage(interaction.guild.name, entries);
-            const message = await interaction.reply({ ...payload, fetchReply: true });
-            if (payload.pageCount <= 1) return;
-
-            const collector = message.createMessageComponentCollector({ time: 5 * 60_000 });
-            collector.on('collect', async button => {
-                if (button.user.id !== interaction.user.id) {
-                    return button.reply({ content: 'Run `/birthday list` for your own copy.', ephemeral: true });
-                }
-                const page = Number(button.customId.split(':')[1]) || 0;
-                const fresh = store.listBirthdays(guildId);
-                await button.update(birthdayListMessage(interaction.guild.name, fresh, { page }));
-            });
-            collector.on('end', async () => {
-                await message.edit({ components: [] }).catch(() => {});
-            });
-            return;
+            const { page, pageCount, ...body } = payload;
+            return interaction.reply(body);
         }
 
         if (sub === 'test') {

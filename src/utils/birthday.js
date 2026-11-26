@@ -8,7 +8,7 @@ const BIRTHDAY_IMAGE_NAME = 'birthday.png';
 const BIRTHDAY_IMAGE_PATH = path.join(__dirname, '..', '..', 'img', BIRTHDAY_IMAGE_NAME);
 const DEFAULT_TIMEZONE = process.env.BIRTHDAY_DEFAULT_TIMEZONE || 'UTC';
 const ANNOUNCE_AFTER_MINUTE = Number(process.env.BIRTHDAY_ANNOUNCE_MINUTE_OF_DAY || 5); // 00:05 local
-const PAGE_SIZE = Number(process.env.BIRTHDAY_PAGE_SIZE || 10);
+const PAGE_BUDGET = Number(process.env.BIRTHDAY_PAGE_CHARS || 3600);
 const MAX_PAGE_BUTTONS = 25;
 
 const MONTHS = [
@@ -131,16 +131,38 @@ function monthlyMessage(month, entries) {
     };
 }
 
-// Fixed-size pages of the sorted list; month headers repeat per page so each page reads alone.
-function buildListPages(entries, pageSize = PAGE_SIZE) {
+// Pages are filled to the description budget instead of a fixed entry count, so a long
+// list needs as few pages as the 4096-char embed allows. Header cost repeats per page.
+function buildListPages(entries, { maxChars = PAGE_BUDGET } = {}) {
     const sorted = [...entries].sort((a, b) => a.month - b.month || a.day - b.day);
-    const size = Math.max(1, pageSize);
+    if (sorted.length === 0) return [{ items: [], groups: [] }];
+
+    const lineCost = entry => `<@${entry.user_id}> — ${formatBirthday(entry)}`.length + 1;
+    const headerCost = (month, used) => `**${MONTHS[month - 1]}**\n`.length + (used > 0 ? 2 : 0);
+
     const pages = [];
-    for (let i = 0; i < sorted.length; i += size) {
-        const slice = sorted.slice(i, i + size);
-        pages.push({ items: slice, groups: groupByMonth(slice) });
+    let items = [];
+    let used = 0;
+    let lastMonth = null;
+
+    for (const entry of sorted) {
+        const monthChanged = entry.month !== lastMonth;
+        const cost = lineCost(entry) + (monthChanged ? headerCost(entry.month, used) : 0);
+
+        if (items.length > 0 && used + cost > maxChars) {
+            pages.push(items);
+            items = [];
+            used = lineCost(entry) + headerCost(entry.month, 0);
+        } else {
+            used += cost;
+        }
+
+        items.push(entry);
+        lastMonth = entry.month;
     }
-    return pages.length > 0 ? pages : [{ items: [], groups: [] }];
+
+    if (items.length > 0) pages.push(items);
+    return pages.map(pageItems => ({ items: pageItems, groups: groupByMonth(pageItems) }));
 }
 
 // One button per page, active page shown as a disabled primary button (Birthdayy's pattern).
@@ -185,8 +207,8 @@ function announcementMessage(userId) {
 }
 
 // Server-wide list: hint line, one page of month-grouped entries, the announcement art.
-function birthdayListMessage(guildName, entries, { page = 0, pageSize = PAGE_SIZE } = {}) {
-    const pages = buildListPages(entries, pageSize);
+function birthdayListMessage(guildName, entries, { page = 0 } = {}) {
+    const pages = buildListPages(entries);
     const current = Math.min(Math.max(page, 0), pages.length - 1);
     const hint = '➤ Register your Birthday with\n`/birthday register <day> <month> [year]`';
     const body = pages[current].groups
@@ -214,7 +236,7 @@ module.exports = {
     ACCENT,
     DEFAULT_TIMEZONE,
     ANNOUNCE_AFTER_MINUTE,
-    PAGE_SIZE,
+    PAGE_BUDGET,
     MONTHS,
     daysInMonth,
     isLeapYear,

@@ -7,6 +7,7 @@ const path = require('node:path');
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const { getStore } = require('./utils/birthday-store');
 const { startBirthdayScheduler } = require('./utils/birthday-scheduler');
+const { handleListButton } = require('./utils/list-buttons');
 
 const HEARTBEAT_PATH = process.env.HEARTBEAT_PATH || '/data/run/child.heartbeat';
 const DRAIN_MS = Number(process.env.DRAIN_MS || 60_000);
@@ -68,6 +69,11 @@ client.once('clientReady', async () => {
 });
 
 client.on('interactionCreate', async interaction => {
+    if (interaction.isButton() && interaction.customId.startsWith('blist:')) {
+        return handleListButton(interaction, getStore())
+            .catch(error => console.error('[cmd] list button failed:', error));
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const context = `[cmd] /${interaction.commandName} user=${interaction.user?.id} guild=${interaction.guildId} channel=${interaction.channelId}`;
