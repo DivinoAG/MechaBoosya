@@ -22,7 +22,8 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 | `utils/birthday.js` | yes | date maths, leap years, timezone parts, message builders, pagination |
 | `utils/birthday-store.js` | yes | CRUD, announcement dedupe, settings, snapshots |
 | `utils/birthday-scheduler.js` | yes | 00:05 gate, catch-up, per-day dedupe, Feb 29, guild timezone |
-| `utils/ranking.js` | partial | progress formatting only; the scan/cache flow has no direct test |
+| `utils/ranking.js` | partial | progress formatting and the permission gate; the scan itself is wired to the coordinator, whose own tests cover the sharing |
+| `utils/scan-coordinator.js` | yes | one scan per channel, shared progress, settle wake-up, failure cleanup |
 | `utils/exports.js` | yes | envelope, atomic write, freshness lookup, retention |
 | `utils/logger.js` | yes | format, rotation, unwritable dir |
 | `utils/list-buttons.js` | yes | paging by custom id, empty registry |

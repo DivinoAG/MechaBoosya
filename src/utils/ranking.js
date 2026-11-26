@@ -3,11 +3,15 @@ const { fetchForumThreads, fetchInitialMessage } = require('./discord-api');
 const { generateReportString } = require('./report-generator');
 const { formatDiscordMessage } = require('./message-formatter');
 const { writeRankingExport, pruneExports, findFreshExport } = require('./exports');
+const { createScanCoordinator, renderProgress } = require('./scan-coordinator');
 
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_HOURS || 3) * 3_600_000;
 const FETCH_DELAY_MS = Number(process.env.FETCH_DELAY_MS || 200);
 const PROGRESS_MIN_POSTS = Number(process.env.PROGRESS_MIN_POSTS || 50);
 const PROGRESS_INTERVAL_MS = Number(process.env.PROGRESS_INTERVAL_MS || 5_000);
+
+// Module-level so every command invocation in this process shares one scan per channel.
+const scans = createScanCoordinator();
 
 function formatDuration(ms) {
     const total = Math.round(ms / 1000);
@@ -46,6 +50,52 @@ function formatAge(ms) {
     return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}m`;
 }
 
+// The scan itself. Callers that arrive mid-scan share this run and its progress.
+async function scanForum(channel, progress, { requestedBy, limit }) {
+    const threads = await fetchForumThreads(channel);
+    progress.total = threads.length;
+    console.log(`Found ${threads.length} threads in total.`);
+
+    const defaultReactionEmoji = channel.defaultReactionEmoji;
+    const threadData = [];
+
+    for (const thread of threads) {
+        const initialMessage = await fetchInitialMessage(thread);
+        if (initialMessage) {
+            const reaction = initialMessage.reactions.cache.find(
+                r => (defaultReactionEmoji.id && r.emoji.id === defaultReactionEmoji.id) ||
+                     (defaultReactionEmoji.name && r.emoji.name === defaultReactionEmoji.name)
+            );
+            threadData.push({
+                name: thread.name,
+                reactionCount: reaction ? reaction.count : 0,
+                tags: thread.appliedTags.map(tagId => channel.availableTags.find(tag => tag.id === tagId)?.name).filter(Boolean),
+            });
+        }
+
+        progress.done += 1;
+        await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
+    }
+
+    threadData.sort((a, b) => b.reactionCount - a.reactionCount);
+
+    // Archive the full sorted list (unlimited) for the wiki ingest; the report may be truncated.
+    try {
+        const exportFile = writeRankingExport(channel.id, threadData, {
+            channelName: channel.name,
+            requestedBy,
+            limit,
+        });
+        console.log(`Ranking export written to ${exportFile}`);
+        const pruned = pruneExports();
+        if (pruned.length > 0) console.log(`Pruned ${pruned.length} expired export(s)`);
+    } catch (exportError) {
+        console.error('Failed to write ranking export:', exportError);
+    }
+
+    return threadData;
+}
+
 async function runRanking(interaction, { force = false } = {}) {
     if (!interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
         return interaction.reply({
@@ -61,6 +111,13 @@ async function runRanking(interaction, { force = false } = {}) {
     if (channel.type !== ChannelType.GuildForum) {
         return interaction.reply({
             content: 'The selected channel is not a forum channel. Please select a forum channel.',
+            flags: MessageFlags.Ephemeral,
+        });
+    }
+
+    if (!channel.defaultReactionEmoji) {
+        return interaction.reply({
+            content: `The forum channel "${channel.name}" does not have a default reaction emoji configured. Cannot process top posts.`,
             flags: MessageFlags.Ephemeral,
         });
     }
@@ -88,68 +145,27 @@ async function runRanking(interaction, { force = false } = {}) {
             console.log(`Serving cached ranking for ${channel.id}, ${formatAge(cached.ageMs)} old (${threadData.length} posts)`);
         } else {
             console.log(`Fetching forum threads... (triggered by /${force ? 'forum-rank-force' : 'forum-rank'} user=${interaction.user.id} channel=${channel.name}(${channel.id}))`);
-            const threads = await fetchForumThreads(channel);
-            console.log(`Found ${threads.length} threads in total.`);
 
-            const defaultReactionEmoji = channel.defaultReactionEmoji;
-            if (!defaultReactionEmoji) {
-                await interaction.editReply({
-                    content: `The forum channel "${channel.name}" does not have a default reaction emoji configured. Cannot process top posts.`,
-                    flags: MessageFlags.Ephemeral,
-                });
-                return;
-            }
+            // A second caller joins the scan already in flight and renders identical progress.
+            const { state, joined } = scans.join(channel.id, progress => scanForum(channel, progress, {
+                requestedBy: interaction.user.id,
+                limit: numberOfPosts || null,
+            }));
+            if (joined) console.log(`Joined the running scan for ${channel.id}`);
 
-            threadData = [];
-            let processedCount = 0;
-            const scanStartedAt = Date.now();
-            let lastProgressAt = 0;
-            const showProgress = threads.length >= PROGRESS_MIN_POSTS;
+            const rendering = renderProgress({
+                interaction,
+                state,
+                intervalMs: PROGRESS_INTERVAL_MS,
+                format: (progress, elapsedMs) => (progress.total >= PROGRESS_MIN_POSTS
+                    ? progressText(channel.name, progress.done, progress.total, elapsedMs)
+                    : null),
+            });
 
-            for (const thread of threads) {
-                console.log(`Processing thread ${++processedCount}/${threads.length}: ${thread.name}`);
-                const initialMessage = await fetchInitialMessage(thread);
-                if (initialMessage) {
-                    const reaction = initialMessage.reactions.cache.find(
-                        r => (defaultReactionEmoji.id && r.emoji.id === defaultReactionEmoji.id) ||
-                             (defaultReactionEmoji.name && r.emoji.name === defaultReactionEmoji.name)
-                    );
-                    threadData.push({
-                        name: thread.name,
-                        reactionCount: reaction ? reaction.count : 0,
-                        tags: thread.appliedTags.map(tagId => channel.availableTags.find(tag => tag.id === tagId)?.name).filter(Boolean),
-                    });
-                }
-
-                // One edit per interval: message edits are rate limited per route and stutter on mobile.
-                if (showProgress && Date.now() - lastProgressAt >= PROGRESS_INTERVAL_MS) {
-                    lastProgressAt = Date.now();
-                    try {
-                        await interaction.editReply({
-                            content: progressText(channel.name, processedCount, threads.length, lastProgressAt - scanStartedAt),
-                        });
-                    } catch (progressError) {
-                        console.error('Progress update failed (continuing):', progressError);
-                    }
-                }
-
-                await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
-            }
-
-            threadData.sort((a, b) => b.reactionCount - a.reactionCount);
-
-            // Archive the full sorted list (unlimited) for the wiki ingest; the report below may be truncated.
             try {
-                const exportFile = writeRankingExport(channel.id, threadData, {
-                    channelName: channel.name,
-                    requestedBy: interaction.user.id,
-                    limit: numberOfPosts || null,
-                });
-                console.log(`Ranking export written to ${exportFile}`);
-                const pruned = pruneExports();
-                if (pruned.length > 0) console.log(`Pruned ${pruned.length} expired export(s)`);
-            } catch (exportError) {
-                console.error('Failed to write ranking export:', exportError);
+                threadData = await state.promise;
+            } finally {
+                await rendering;
             }
         }
 
