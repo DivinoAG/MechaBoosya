@@ -14,7 +14,7 @@ Runs as a Node process inside its own container, supervised by `src/supervisor.j
 | `/birthday update` | Everyone (self) | Same options, requires an existing entry. |
 | `/birthday remove` | Everyone (self) | Managers can remove someone else's. |
 | `/birthday show` | Everyone | Your birthday, or `user` for someone else. Ephemeral. |
-| `/birthday list` | Everyone, public | Month-grouped embed with numbered page buttons; paging is private to the invoker. |
+| `/birthday list` | Everyone, public | Month-grouped embed with numbered page buttons; any member can page it, and the buttons keep working across restarts. Pages pack entries until the embed's description budget is reached. |
 | `/birthday test` | Manage Server | Posts a real announcement for you in the configured channel. |
 | `/birthday-config status` | Manage Server | Current settings and registration count. |
 | `/birthday-config announcement-channel` | Manage Server | Channel for announcements; empty disables them. |
@@ -55,7 +55,7 @@ Everything is read from the environment at call time. **Only variables listed in
 | `CACHE_TTL_HOURS` | `3` | ranking cache window |
 | `FETCH_DELAY_MS` | `200` | pause between thread fetches |
 | `PROGRESS_MIN_POSTS` / `PROGRESS_INTERVAL_MS` | `50` / `5000` | progress message thresholds |
-| `BIRTHDAY_PAGE_SIZE` | `10` | entries per page |
+| `BIRTHDAY_PAGE_CHARS` | `3600` | description budget that decides page breaks |
 | `BIRTHDAY_DEFAULT_TIMEZONE` | `UTC` | until the guild overrides it |
 | `BIRTHDAY_ANNOUNCE_MINUTE_OF_DAY` | `5` | 00:05 local |
 | `RANKING_KEEP_DAYS` / `SNAPSHOT_KEEP_DAYS` | `30` / `7` | retention sweep |
