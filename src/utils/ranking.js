@@ -6,6 +6,19 @@ const { writeRankingExport, pruneExports, findFreshExport } = require('./exports
 
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_HOURS || 3) * 3_600_000;
 const FETCH_DELAY_MS = Number(process.env.FETCH_DELAY_MS || 200);
+const PROGRESS_MIN_POSTS = Number(process.env.PROGRESS_MIN_POSTS || 50);
+const PROGRESS_INTERVAL_MS = Number(process.env.PROGRESS_INTERVAL_MS || 5_000);
+
+function formatDuration(ms) {
+    const total = Math.round(ms / 1000);
+    const minutes = Math.floor(total / 60);
+    return `${minutes}m${String(total % 60).padStart(2, '0')}s`;
+}
+
+function progressText(channelName, done, total, elapsedMs) {
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return `🔍 Scanning #${channelName} — ${done} / ${total} posts (${pct}%) · ${formatDuration(elapsedMs)}`;
+}
 
 // Shared by /forum-rank and /forum-rank-force so the two stay identical.
 function addRankingOptions(builder) {
@@ -89,6 +102,10 @@ async function runRanking(interaction, { force = false } = {}) {
 
             threadData = [];
             let processedCount = 0;
+            const scanStartedAt = Date.now();
+            let lastProgressAt = 0;
+            const showProgress = threads.length >= PROGRESS_MIN_POSTS;
+
             for (const thread of threads) {
                 console.log(`Processing thread ${++processedCount}/${threads.length}: ${thread.name}`);
                 const initialMessage = await fetchInitialMessage(thread);
@@ -103,6 +120,19 @@ async function runRanking(interaction, { force = false } = {}) {
                         tags: thread.appliedTags.map(tagId => channel.availableTags.find(tag => tag.id === tagId)?.name).filter(Boolean),
                     });
                 }
+
+                // One edit per interval: message edits are rate limited per route and stutter on mobile.
+                if (showProgress && Date.now() - lastProgressAt >= PROGRESS_INTERVAL_MS) {
+                    lastProgressAt = Date.now();
+                    try {
+                        await interaction.editReply({
+                            content: progressText(channel.name, processedCount, threads.length, lastProgressAt - scanStartedAt),
+                        });
+                    } catch (progressError) {
+                        console.error('Progress update failed (continuing):', progressError);
+                    }
+                }
+
                 await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
             }
 
@@ -156,4 +186,4 @@ async function runRanking(interaction, { force = false } = {}) {
     }
 }
 
-module.exports = { runRanking, addRankingOptions, CACHE_TTL_MS };
+module.exports = { runRanking, addRankingOptions, progressText, CACHE_TTL_MS };
