@@ -5,6 +5,8 @@
 
 const { spawn, spawnSync } = require('node:child_process');
 const { createServer } = require('node:http');
+const logger = require('./utils/logger');
+logger.install({ name: 'supervisor' });
 const { timingSafeEqual } = require('node:crypto');
 const crypto = require('node:crypto');
 const fs = require('node:fs');

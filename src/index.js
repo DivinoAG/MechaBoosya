@@ -1,4 +1,7 @@
 require('dotenv').config();
+const logger = require('./utils/logger');
+logger.install({ name: 'bot' });
+
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
@@ -18,6 +21,10 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
     ],
 });
+
+client.on('error', error => console.error('[client] error:', error));
+client.on('warn', warning => console.warn('[client] warn:', warning));
+client.rest.on('rateLimited', info => console.warn('[rest] rate limited:', info));
 
 // One file per command in src/commands — adding a command means adding a file, nothing here changes.
 client.commands = new Collection();
@@ -62,27 +69,40 @@ client.once('clientReady', async () => {
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+
+    const context = `[cmd] /${interaction.commandName} user=${interaction.user?.id} guild=${interaction.guildId} channel=${interaction.channelId}`;
+
     if (draining) {
+        console.warn(`${context} rejected: draining`);
         await interaction.reply({ content: 'Restarting, try again in a moment.', ephemeral: true }).catch(() => {});
         return;
     }
 
     const command = client.commands.get(interaction.commandName);
     if (!command) {
-        console.error(`No command matching ${interaction.commandName} was found.`);
+        console.error(`${context} no handler registered`);
         return;
     }
 
     activeCommands += 1;
+    const startedAt = Date.now();
+    console.log(`${context} start`);
+
     try {
         await command.execute(interaction);
+        console.log(`${context} ok in ${Date.now() - startedAt}ms`);
     } catch (error) {
-        console.error(`Error executing command ${interaction.commandName}:`, error);
+        console.error(`${context} FAILED after ${Date.now() - startedAt}ms:`, error);
         const payload = { content: 'There was an error while executing this command!', ephemeral: true };
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(payload).catch(() => {});
-        } else {
-            await interaction.reply(payload).catch(() => {});
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(payload);
+            } else {
+                await interaction.reply(payload);
+            }
+        } catch (replyError) {
+            // Interaction expired (>3s without a reply) or the reply itself was rejected.
+            console.error(`${context} could not deliver the error reply:`, replyError);
         }
     } finally {
         activeCommands -= 1;
