@@ -106,6 +106,26 @@ function announcementMessage(userId) {
     };
 }
 
+// Server-wide list: hint line, month-grouped entries, the same art as the announcement.
+function birthdayListMessage(guildName, entries) {
+    const body = groupByMonth(entries)
+        .map(group => `**${group.label}**\n${group.text}`)
+        .join('\n\n');
+    const description = `➤ Register your Birthday with \`/birthday register <day> <month> [year]\`\n\n${body}`;
+
+    const embed = new EmbedBuilder()
+        .setColor(ACCENT)
+        .setTitle(`Birthday List - ${guildName}`)
+        .setDescription(description.length > 4096 ? `${description.slice(0, 4095)}…` : description)
+        .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
+        .setFooter({ text: `${entries.length} birthday(s) registered` });
+
+    return {
+        embeds: [embed],
+        files: [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }],
+    };
+}
+
 module.exports = {
     ACCENT,
     DEFAULT_TIMEZONE,
@@ -121,4 +141,5 @@ module.exports = {
     formatBirthday,
     groupByMonth,
     announcementMessage,
+    birthdayListMessage,
 };

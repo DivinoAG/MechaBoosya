@@ -87,7 +87,7 @@ async function runRanking(interaction, { force = false } = {}) {
             threadData = cached.payload.threads;
             console.log(`Serving cached ranking for ${channel.id}, ${formatAge(cached.ageMs)} old (${threadData.length} posts)`);
         } else {
-            console.log('Fetching forum threads...');
+            console.log(`Fetching forum threads... (triggered by /${force ? 'forum-rank-force' : 'forum-rank'} user=${interaction.user.id} channel=${channel.name}(${channel.id}))`);
             const threads = await fetchForumThreads(channel);
             console.log(`Found ${threads.length} threads in total.`);
 

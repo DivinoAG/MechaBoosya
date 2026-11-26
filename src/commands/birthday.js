@@ -2,9 +2,8 @@
 
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
-const { ACCENT } = require('../utils/theme');
 const {
-    isValidDate, formatBirthday, groupByMonth, announcementMessage, MONTHS,
+    isValidDate, formatBirthday, announcementMessage, birthdayListMessage,
 } = require('../utils/birthday');
 
 function managerOnly(interaction) {
@@ -60,17 +59,7 @@ module.exports = {
             if (entries.length === 0) {
                 return interaction.reply({ content: 'No birthdays registered in this server yet.', ephemeral: true });
             }
-            const groups = groupByMonth(entries);
-            const description = groups
-                .map(g => `**${g.label}**\n${g.text}`)
-                .join('\n\n');
-            const embed = {
-                color: ACCENT,
-                title: 'Birthday List',
-                description: description.length > 4096 ? description.slice(0, 4093) + '…' : description,
-                footer: { text: `${entries.length} birthday(s) registered` },
-            };
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply(birthdayListMessage(interaction.guild.name, entries));
         }
 
         if (sub === 'test') {
