@@ -21,6 +21,7 @@ Runs as a Node process inside its own container, supervised by `src/supervisor.j
 | `/birthday-config ping-role` | Manage Server | Role pinged with each announcement. |
 | `/birthday-config birthday-role` | Manage Server | Role granted for the day and removed the next. |
 | `/birthday-config log-channel` | Manage Server | Channel that receives birthday change events. |
+| `/birthday-config monthly` | Manage Server | Pinned "upcoming birthdays" post: `mode` = announcement channel, custom channel, or off. |
 | `/birthday-config timezone` | Manage Server | IANA time zone deciding "today" (default `UTC`). |
 | `/help` | Everyone | Lists the commands the caller can use. |
 
@@ -33,6 +34,10 @@ Ranking options: `channel` (required), `number_of_posts`, `direct_message`.
 **Caching.** Each scan writes `ranking-<channelId>-<ISO>.json`; later runs inside `CACHE_TTL_HOURS` (default 3, this deployment uses 6) are built from that file and the embed footer states its age. A missing, stale or unparsable file degrades to a rescan. `/forum-rank-force` bypasses the cache.
 
 **Birthdays.** Announcements fire once per person per day after 00:05 in the guild's time zone, so a boot at any hour catches up the same day; a unique `(guild, user, date)` row is the dedupe guard and a failed send is retried on the next tick. Feb 29 is celebrated on Mar 1 in non-leap years. The birthday role is synced once a day: members celebrating get it, everybody else loses it. The bot's role must sit above the birthday role.
+
+**Monthly digest.** On the last day of a month the bot posts the upcoming month's list, pins it, and then edits that same message once a day while the month runs, so late registrations appear without a new post. On rollover the previous message is unpinned and the next one is posted. One message per guild, tracked in `monthly_posts`; needs **Manage Messages** to pin.
+
+**Archive.** A Hermes cron job (`/opt/data/scripts/mecha-boosya-ingest.sh`, every 15 min) copies new ranking exports into `llm-wiki/raw/cosplay-wishlist/<yyyy>/<mm>/` and pushes the wiki repo when something changed; a daily job (03:00) also refreshes `llm-wiki/raw/mecha-boosya/db/latest.sqlite`. Both are silent unless they do something or the health check fails.
 
 ## Configuration
 
