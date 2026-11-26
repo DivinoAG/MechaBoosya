@@ -116,11 +116,12 @@ function monthlyMessage(month, entries) {
     const body = inMonth.length > 0
         ? groupByMonth(inMonth)[0].text
         : `No birthdays registered for ${MONTHS[month - 1]} yet.`;
+    const hint = '➤ Register your Birthday with\n`/birthday register <day> <month> [year]`';
 
     const embed = new EmbedBuilder()
         .setColor(ACCENT)
         .setTitle(`Upcoming birthdays of ${MONTHS[month - 1]}`)
-        .setDescription(body)
+        .setDescription(`${hint}\n\n${body}`)
         .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
         .setFooter({ text: `${inMonth.length} birthday(s) in ${MONTHS[month - 1]}` });
 
