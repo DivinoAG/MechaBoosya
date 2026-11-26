@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DEFAULT_TIMEZONE, ANNOUNCE_AFTER_MINUTE, zonedParts, dateKey, matchesToday, announcementMessage } = require('./birthday');
+const { DEFAULT_TIMEZONE, ANNOUNCE_AFTER_MINUTE, zonedParts, dateKey, matchesToday, announcementMessage, isLastDayOfMonth, nextMonth, monthlyMessage, MONTHS } = require('./birthday');
 const { pruneExports } = require('./exports');
 const { notify } = require('./guild-log');
 
@@ -12,6 +12,50 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
     let busy = false;
     let lastSnapshot = null;
     let lastRoleSync = null;
+    let lastMonthlyRefresh = null;
+
+    // One pinned message per guild: posted on the last day of the month for the month ahead,
+    // refreshed once a day while that month runs, old one unpinned on rollover.
+    async function syncMonthly(settings, todayParts, key) {
+        const mode = settings.monthly_mode || 'announcement';
+        if (mode === 'off') return;
+
+        const channelId = mode === 'custom' ? settings.monthly_channel : settings.announcement_channel;
+        if (!channelId) return;
+
+        const targetMonth = isLastDayOfMonth(todayParts) ? nextMonth(todayParts.month) : todayParts.month;
+        const payload = monthlyMessage(targetMonth, store.listBirthdays(guildId));
+        const existing = store.getMonthlyPost(guildId);
+
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) {
+            console.error(`[monthly] channel ${channelId} not reachable`);
+            return;
+        }
+
+        if (existing && existing.month === targetMonth && existing.channel_id === channelId) {
+            if (lastMonthlyRefresh === key) return;
+            const message = await channel.messages.fetch(existing.message_id).catch(() => null);
+            if (message) {
+                await message.edit(payload).catch(error => console.error('[monthly] edit failed:', error.message));
+                lastMonthlyRefresh = key;
+                return;
+            }
+        }
+
+        if (existing) {
+            const oldChannel = await client.channels.fetch(existing.channel_id).catch(() => null);
+            const old = oldChannel ? await oldChannel.messages.fetch(existing.message_id).catch(() => null) : null;
+            if (old) await old.unpin().catch(error => console.warn('[monthly] unpin failed:', error.message));
+        }
+
+        const message = await channel.send(payload);
+        await message.pin().catch(error => console.warn('[monthly] pin failed:', error.message));
+        store.setMonthlyPost({ guildId, month: targetMonth, channelId, messageId: message.id });
+        lastMonthlyRefresh = key;
+        console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id}`);
+        await notify(client, store, guildId, `📅 Posted the upcoming birthdays of ${MONTHS[targetMonth - 1]}`);
+    }
 
     // Birthday role is synced once per day (and once per boot); members who left are skipped.
     async function syncRole(settings, celebrants) {
@@ -100,6 +144,8 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
             await syncRole(settings, celebrants);
             lastRoleSync = key;
         }
+
+        await syncMonthly(settings, now, key);
 
         if (exportDir && lastSnapshot !== key) {
             try {

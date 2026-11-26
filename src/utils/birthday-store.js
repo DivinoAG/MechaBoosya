@@ -26,6 +26,13 @@ CREATE TABLE IF NOT EXISTS settings (
     value    TEXT NOT NULL,
     PRIMARY KEY (guild_id, key)
 );
+CREATE TABLE IF NOT EXISTS monthly_posts (
+    guild_id   TEXT    PRIMARY KEY,
+    month      INTEGER NOT NULL,
+    channel_id TEXT    NOT NULL,
+    message_id TEXT    NOT NULL,
+    updated_at TEXT    NOT NULL
+);
 `;
 
 function openStore(file = process.env.DB_PATH || '/data/db/mecha-boosya.sqlite') {
@@ -98,6 +105,23 @@ function openStore(file = process.env.DB_PATH || '/data/db/mecha-boosya.sqlite')
         allSettings(guildId) {
             const rows = db.prepare('SELECT key, value FROM settings WHERE guild_id = ?').all(guildId);
             return Object.fromEntries(rows.map(r => [r.key, r.value]));
+        },
+
+        // The single pinned "upcoming birthdays" message per guild.
+        getMonthlyPost(guildId) {
+            return db.prepare('SELECT * FROM monthly_posts WHERE guild_id = ?').get(guildId) ?? null;
+        },
+
+        setMonthlyPost({ guildId, month, channelId, messageId }) {
+            db.prepare(`
+                INSERT INTO monthly_posts (guild_id, month, channel_id, message_id, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(guild_id) DO UPDATE SET
+                    month = excluded.month,
+                    channel_id = excluded.channel_id,
+                    message_id = excluded.message_id,
+                    updated_at = excluded.updated_at
+            `).run(guildId, month, channelId, messageId, new Date().toISOString());
         },
 
         snapshotTo(file) {

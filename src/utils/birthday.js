@@ -94,6 +94,34 @@ function groupByMonth(entries) {
     }));
 }
 
+function isLastDayOfMonth(parts) {
+    return parts.day === daysInMonth(parts.month, parts.year);
+}
+
+function nextMonth(month) {
+    return month === 12 ? 1 : month + 1;
+}
+
+// Pinned "upcoming birthdays" post: everyone registered in that month, nothing else.
+function monthlyMessage(month, entries) {
+    const inMonth = entries.filter(entry => entry.month === month);
+    const body = inMonth.length > 0
+        ? groupByMonth(inMonth)[0].text
+        : `No birthdays registered for ${MONTHS[month - 1]} yet.`;
+
+    const embed = new EmbedBuilder()
+        .setColor(ACCENT)
+        .setTitle(`Upcoming birthdays of ${MONTHS[month - 1]}`)
+        .setDescription(body)
+        .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
+        .setFooter({ text: `${inMonth.length} birthday(s) in ${MONTHS[month - 1]}` });
+
+    return {
+        embeds: [embed],
+        files: [{ attachment: BIRTHDAY_IMAGE_PATH, name: BIRTHDAY_IMAGE_NAME }],
+    };
+}
+
 // Fixed-size pages of the sorted list; month headers repeat per page so each page reads alone.
 function buildListPages(entries, pageSize = PAGE_SIZE) {
     const sorted = [...entries].sort((a, b) => a.month - b.month || a.day - b.day);
@@ -190,6 +218,9 @@ module.exports = {
     groupByMonth,
     buildListPages,
     pageButtons,
+    isLastDayOfMonth,
+    nextMonth,
+    monthlyMessage,
     announcementMessage,
     birthdayListMessage,
 };
