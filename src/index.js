@@ -4,7 +4,7 @@ logger.install({ name: 'bot' });
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, MessageFlags, REST, Routes } = require('discord.js');
 const { getStore } = require('./utils/birthday-store');
 const { startBirthdayScheduler } = require('./utils/birthday-scheduler');
 const { handleListButton } = require('./utils/list-buttons');
@@ -80,7 +80,7 @@ client.on('interactionCreate', async interaction => {
 
     if (draining) {
         console.warn(`${context} rejected: draining`);
-        await interaction.reply({ content: 'Restarting, try again in a moment.', ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: 'Restarting, try again in a moment.', flags: MessageFlags.Ephemeral }).catch(() => {});
         return;
     }
 
@@ -99,7 +99,7 @@ client.on('interactionCreate', async interaction => {
         console.log(`${context} ok in ${Date.now() - startedAt}ms`);
     } catch (error) {
         console.error(`${context} FAILED after ${Date.now() - startedAt}ms:`, error);
-        const payload = { content: 'There was an error while executing this command!', ephemeral: true };
+        const payload = { content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral };
         try {
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(payload);

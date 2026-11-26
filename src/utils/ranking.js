@@ -1,4 +1,4 @@
-const { ChannelType, PermissionsBitField } = require('discord.js');
+const { ChannelType, MessageFlags, PermissionsBitField } = require('discord.js');
 const { fetchForumThreads, fetchInitialMessage } = require('./discord-api');
 const { generateReportString } = require('./report-generator');
 const { formatDiscordMessage } = require('./message-formatter');
@@ -50,7 +50,7 @@ async function runRanking(interaction, { force = false } = {}) {
     if (!interaction.memberPermissions.has('MANAGE_CHANNELS')) {
         return interaction.reply({
             content: 'You do not have permission to use this command.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -61,7 +61,7 @@ async function runRanking(interaction, { force = false } = {}) {
     if (channel.type !== ChannelType.GuildForum) {
         return interaction.reply({
             content: 'The selected channel is not a forum channel. Please select a forum channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -69,11 +69,11 @@ async function runRanking(interaction, { force = false } = {}) {
     if (!botPermissions.has(PermissionsBitField.Flags.ViewChannel) || !botPermissions.has(PermissionsBitField.Flags.ReadMessageHistory)) {
         return interaction.reply({
             content: 'I need "View Channel" and "Read Message History" permissions in the selected forum channel to work properly.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
-    await interaction.deferReply({ ephemeral: directMessage });
+    await interaction.deferReply({ flags: directMessage ? MessageFlags.Ephemeral : undefined });
 
     try {
         let threadData;
@@ -95,7 +95,7 @@ async function runRanking(interaction, { force = false } = {}) {
             if (!defaultReactionEmoji) {
                 await interaction.editReply({
                     content: `The forum channel "${channel.name}" does not have a default reaction emoji configured. Cannot process top posts.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -174,14 +174,14 @@ async function runRanking(interaction, { force = false } = {}) {
         }
 
         if (directMessage) {
-            await interaction.editReply({ content: 'Report sent to your DMs.', ephemeral: true });
+            await interaction.editReply({ content: 'Report sent to your DMs.', flags: MessageFlags.Ephemeral });
         }
 
     } catch (error) {
         console.error('Error processing top-posts command:', error);
         await interaction.editReply({
             content: 'An error occurred while processing your request. Please try again later.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 }

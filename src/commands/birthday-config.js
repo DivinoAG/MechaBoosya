@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
+const { ChannelType, MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
 const { ACCENT } = require('../utils/theme');
 const { DEFAULT_TIMEZONE, isValidTimeZone } = require('../utils/birthday');
@@ -63,7 +63,7 @@ module.exports = {
 
     async execute(interaction) {
         if (!managerOnly(interaction)) {
-            return interaction.reply({ content: 'Manage Server permission required.', ephemeral: true });
+            return interaction.reply({ content: 'Manage Server permission required.', flags: MessageFlags.Ephemeral });
         }
 
         const store = getStore();
@@ -84,7 +84,7 @@ module.exports = {
             ];
             return interaction.reply({
                 embeds: [{ color: ACCENT, title: 'Birthday Configuration', description: lines.join('\n') }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -93,7 +93,7 @@ module.exports = {
             store.setSetting(guildId, 'announcement_channel', channel ? channel.id : null);
             return interaction.reply({
                 content: channel ? `Announcements will be posted in <#${channel.id}>.` : 'Announcements disabled (no channel set).',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -102,7 +102,7 @@ module.exports = {
             store.setSetting(guildId, 'ping_role', role ? role.id : null);
             return interaction.reply({
                 content: role ? `Announcements will ping <@&${role.id}>.` : 'Role ping disabled.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -111,7 +111,7 @@ module.exports = {
             const channel = interaction.options.getChannel('channel');
 
             if (mode === 'custom' && !channel) {
-                return interaction.reply({ content: 'Pick a channel when using custom mode.', ephemeral: true });
+                return interaction.reply({ content: 'Pick a channel when using custom mode.', flags: MessageFlags.Ephemeral });
             }
 
             store.setSetting(guildId, 'monthly_mode', mode);
@@ -122,7 +122,7 @@ module.exports = {
                 content: mode === 'off'
                     ? 'Monthly upcoming-birthdays post disabled.'
                     : `Monthly post will go to ${where}: posted on the last day of each month, pinned, refreshed daily. The bot needs Manage Messages to pin.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -133,7 +133,7 @@ module.exports = {
                 content: role
                     ? `Members will receive <@&${role.id}> on their birthday. Keep the bot's role above it, or assignment will fail.`
                     : 'Birthday role disabled.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -142,7 +142,7 @@ module.exports = {
             store.setSetting(guildId, 'log_channel', channel ? channel.id : null);
             return interaction.reply({
                 content: channel ? `Birthday changes will be logged in <#${channel.id}>.` : 'Logging disabled.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -151,10 +151,10 @@ module.exports = {
         if (!isValidTimeZone(value)) {
             return interaction.reply({
                 content: `\`${value}\` is not a valid IANA time zone. Try \`America/Sao_Paulo\`, \`Europe/Lisbon\` or \`UTC\`.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
         store.setSetting(guildId, 'timezone', value);
-        return interaction.reply({ content: `Timezone set to \`${value}\`.`, ephemeral: true });
+        return interaction.reply({ content: `Timezone set to \`${value}\`.`, flags: MessageFlags.Ephemeral });
     },
 };

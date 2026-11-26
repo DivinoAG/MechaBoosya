@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
 const { ACCENT } = require('../utils/theme');
 
 module.exports = {
@@ -26,7 +26,7 @@ module.exports = {
 
         return interaction.reply({
             embeds: [{ color: ACCENT, title: 'MechaBoosya commands', description: lines.join('\n\n') }],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     },
 };

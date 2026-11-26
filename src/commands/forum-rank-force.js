@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
 const { runRanking, addRankingOptions } = require('../utils/ranking');
 
 // Hidden from members without Manage Server, so only they ever see the option to rescan.
@@ -13,7 +13,7 @@ module.exports = {
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.ManageGuild)) {
             return interaction.reply({
                 content: 'Rescanning requires the Manage Server permission.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
         return runRanking(interaction, { force: true });

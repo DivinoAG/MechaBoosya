@@ -1,3 +1,4 @@
+const { MessageFlags } = require('discord.js');
 'use strict';
 
 const { birthdayListMessage } = require('./birthday');
@@ -6,7 +7,7 @@ const { birthdayListMessage } = require('./birthday');
 // message, and they keep working after a deploy because the pages are rebuilt from the DB.
 async function handleListButton(interaction, store) {
     if (!interaction.guild) {
-        return interaction.reply({ content: 'This list only works inside a server.', ephemeral: true });
+        return interaction.reply({ content: 'This list only works inside a server.', flags: MessageFlags.Ephemeral });
     }
 
     const page = Number(interaction.customId.split(':')[1]) || 0;

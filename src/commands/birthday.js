@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
 const { notify } = require('../utils/guild-log');
 const {
@@ -58,7 +58,7 @@ module.exports = {
         if (sub === 'list') {
             const entries = store.listBirthdays(guildId);
             if (entries.length === 0) {
-                return interaction.reply({ content: 'No birthdays registered in this server yet.', ephemeral: true });
+                return interaction.reply({ content: 'No birthdays registered in this server yet.', flags: MessageFlags.Ephemeral });
             }
 
             const payload = birthdayListMessage(interaction.guild.name, entries);
@@ -68,35 +68,35 @@ module.exports = {
 
         if (sub === 'test') {
             if (!managerOnly(interaction)) {
-                return interaction.reply({ content: 'Manage Server permission required.', ephemeral: true });
+                return interaction.reply({ content: 'Manage Server permission required.', flags: MessageFlags.Ephemeral });
             }
             const channelId = store.getSetting(guildId, 'announcement_channel');
             const channel = channelId ? await interaction.client.channels.fetch(channelId).catch(() => null) : null;
             if (!channel) {
-                return interaction.reply({ content: 'No announcement channel configured. Use `/birthday-config announcement-channel`.', ephemeral: true });
+                return interaction.reply({ content: 'No announcement channel configured. Use `/birthday-config announcement-channel`.', flags: MessageFlags.Ephemeral });
             }
             const pingRole = store.getSetting(guildId, 'ping_role');
             await channel.send({
                 content: pingRole ? `Test announcement for <@&${pingRole}>` : undefined,
                 ...announcementMessage(interaction.user.id),
             });
-            return interaction.reply({ content: `Test announcement posted in <#${channel.id}>.`, ephemeral: true });
+            return interaction.reply({ content: `Test announcement posted in <#${channel.id}>.`, flags: MessageFlags.Ephemeral });
         }
 
         if (sub === 'show') {
             const record = store.getBirthday(guildId, user.id);
             if (!record) {
-                return interaction.reply({ content: isSelf ? 'You have not registered a birthday yet.' : `<@${user.id}> has not registered a birthday.`, ephemeral: true });
+                return interaction.reply({ content: isSelf ? 'You have not registered a birthday yet.' : `<@${user.id}> has not registered a birthday.`, flags: MessageFlags.Ephemeral });
             }
             return interaction.reply({
                 content: `<@${user.id}> — ${formatBirthday({ month: record.month, day: record.day, year: record.year })}`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         if (sub === 'remove') {
             if (!isSelf && !managerOnly(interaction)) {
-                return interaction.reply({ content: 'Manage Server permission required to remove someone else\'s birthday.', ephemeral: true });
+                return interaction.reply({ content: 'Manage Server permission required to remove someone else\'s birthday.', flags: MessageFlags.Ephemeral });
             }
             const removed = store.deleteBirthday(guildId, user.id);
             if (removed) {
@@ -106,29 +106,29 @@ module.exports = {
                 content: removed
                     ? (isSelf ? 'Your birthday was removed.' : `Removed the birthday of <@${user.id}>.`)
                     : (isSelf ? 'You had no birthday registered.' : `<@${user.id}> had no birthday registered.`),
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         // register / update
         if (!isSelf && !managerOnly(interaction)) {
-            return interaction.reply({ content: 'Manage Server permission required to set someone else\'s birthday.', ephemeral: true });
+            return interaction.reply({ content: 'Manage Server permission required to set someone else\'s birthday.', flags: MessageFlags.Ephemeral });
         }
 
         const { month, day, year } = dateOptions(interaction.options);
         if (!isValidDate(month, day, year)) {
             return interaction.reply({
                 content: `${day}/${month}${year ? `/${year}` : ''} is not a valid date (February 29 is allowed without a year).`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         const existing = store.getBirthday(guildId, user.id);
         if (sub === 'register' && existing) {
-            return interaction.reply({ content: 'That birthday is already registered. Use `/birthday update` to change it.', ephemeral: true });
+            return interaction.reply({ content: 'That birthday is already registered. Use `/birthday update` to change it.', flags: MessageFlags.Ephemeral });
         }
         if (sub === 'update' && !existing) {
-            return interaction.reply({ content: 'No birthday registered yet. Use `/birthday register` first.', ephemeral: true });
+            return interaction.reply({ content: 'No birthday registered yet. Use `/birthday register` first.', flags: MessageFlags.Ephemeral });
         }
 
         store.upsertBirthday({ guildId, userId: user.id, month, day, year });
@@ -142,7 +142,7 @@ module.exports = {
             content: isSelf
                 ? `Birthday saved: **${formatted}**.`
                 : `Saved <@${user.id}>'s birthday: **${formatted}**.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     },
 };
