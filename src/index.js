@@ -2,6 +2,8 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const { getStore } = require('./utils/birthday-store');
+const { startBirthdayScheduler } = require('./utils/birthday-scheduler');
 
 const HEARTBEAT_PATH = process.env.HEARTBEAT_PATH || '/data/run/child.heartbeat';
 const DRAIN_MS = Number(process.env.DRAIN_MS || 60_000);
@@ -50,6 +52,12 @@ client.once('clientReady', async () => {
 
     touchHeartbeat();
     setInterval(touchHeartbeat, 30_000).unref();
+
+    startBirthdayScheduler(client, {
+        store: getStore(),
+        guildId,
+        exportDir: process.env.EXPORT_DIR,
+    });
 });
 
 client.on('interactionCreate', async interaction => {
