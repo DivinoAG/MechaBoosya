@@ -111,7 +111,7 @@ function birthdayListMessage(guildName, entries) {
     const body = groupByMonth(entries)
         .map(group => `**${group.label}**\n${group.text}`)
         .join('\n\n');
-    const description = `➤ Register your Birthday with \`/birthday register <day> <month> [year]\`\n\n${body}`;
+    const description = `➤ Register your Birthday with\n\`/birthday register <day> <month> [year]\`\n\n${body}`;
 
     const embed = new EmbedBuilder()
         .setColor(ACCENT)

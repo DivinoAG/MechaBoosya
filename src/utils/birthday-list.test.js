@@ -15,7 +15,7 @@ test('titles the list with the server name and shows the register hint', () => {
     const data = birthdayListMessage('Irina Meier - Official Discord', entries).embeds[0].data;
 
     assert.strictEqual(data.title, 'Birthday List - Irina Meier - Official Discord');
-    assert.match(data.description, /^➤ Register your Birthday with `\/birthday register <day> <month> \[year\]`\n\n/);
+    assert.match(data.description, /^➤ Register your Birthday with\n`\/birthday register <day> <month> \[year\]`\n\n/);
 });
 
 test('groups by month in order, with the year only when known', () => {
