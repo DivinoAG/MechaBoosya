@@ -78,13 +78,15 @@ test('a short list stays on a single page', () => {
 test('page buttons number the pages and mark the active one disabled', () => {
     const buttons = pageButtons(1, 3)[0].components;
 
-    // Scope change: the refresh button shares the row, so compare ids and the labelled subset.
-    assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:0', 'blist:1', 'blist:2', 'blist:refresh:1']);
+    // Scope change: refresh comes first because it is the only button always present.
+    assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:refresh:1', 'blist:0', 'blist:1', 'blist:2']);
     const numbered = buttons.filter(b => b.data.label);
     assert.deepStrictEqual(numbered.map(b => b.data.label), ['1', '2', '3']);
-    assert.strictEqual(buttons[1].data.disabled, true);
-    assert.strictEqual(buttons[1].data.style, 1); // Primary
-    assert.strictEqual(buttons[0].data.style, 2); // Secondary
+
+    const active = buttons.find(b => b.data.custom_id === 'blist:1');
+    assert.strictEqual(active.data.disabled, true);
+    assert.strictEqual(active.data.style, 1); // Primary
+    assert.strictEqual(buttons.find(b => b.data.custom_id === 'blist:0').data.style, 2); // Secondary
 });
 
 test('out-of-range pages clamp to the last page', () => {

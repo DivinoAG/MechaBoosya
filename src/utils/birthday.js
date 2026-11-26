@@ -176,7 +176,11 @@ function buildListPages(entries, { maxChars = PAGE_BUDGET } = {}) {
 
 // One button per page, active page shown as a disabled primary button (Birthdayy's pattern).
 function pageButtons(page, pageCount) {
-    const buttons = [];
+    // Refresh is first: it is the only button present on every list, single page or not.
+    const buttons = [new ButtonBuilder()
+        .setCustomId(`blist:refresh:${page}`)
+        .setEmoji('♻️')
+        .setStyle(ButtonStyle.Secondary)];
 
     if (pageCount > 1) {
         let first = 0;
@@ -195,12 +199,6 @@ function pageButtons(page, pageCount) {
                 .setDisabled(i === page));
         }
     }
-
-    // Always last, so a single-page list still has a way to pick up new birthdays.
-    buttons.push(new ButtonBuilder()
-        .setCustomId(`blist:refresh:${page}`)
-        .setEmoji('♻️')
-        .setStyle(ButtonStyle.Secondary));
 
     const rows = [];
     for (let i = 0; i < buttons.length; i += 5) {
