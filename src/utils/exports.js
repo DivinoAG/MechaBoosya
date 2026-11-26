@@ -65,4 +65,34 @@ function pruneExports({ now = Date.now(), dir = exportDir() } = {}) {
     return removed;
 }
 
-module.exports = { exportDir, rankingPath, writeRankingExport, pruneExports, RANKING_KEEP_DAYS, SNAPSHOT_KEEP_DAYS };
+// Newest export for a channel, or null when the newest one is older than ttlMs.
+// Filenames are ISO-stamped, so lexicographic order is chronological.
+function findFreshExport(channelId, ttlMs, { dir = exportDir(), now = Date.now() } = {}) {
+    let names;
+    try {
+        names = fs.readdirSync(dir);
+    } catch {
+        return null;
+    }
+
+    const prefix = `ranking-${channelId}-`;
+    const newest = names
+        .filter(n => n.startsWith(prefix) && n.endsWith('.json'))
+        .sort()
+        .pop();
+    if (!newest) return null;
+
+    const file = path.join(dir, newest);
+    const ageMs = now - fs.statSync(file).mtimeMs;
+    if (ageMs > ttlMs) return null;
+
+    try {
+        const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (!Array.isArray(payload.threads)) return null;
+        return { file, payload, ageMs };
+    } catch {
+        return null;
+    }
+}
+
+module.exports = { exportDir, rankingPath, writeRankingExport, pruneExports, findFreshExport, RANKING_KEEP_DAYS, SNAPSHOT_KEEP_DAYS };
