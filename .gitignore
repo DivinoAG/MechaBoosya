@@ -1,4 +1,10 @@
 node_modules
+node_modules.old
 .env
 post_data_debug.json
 *.log
+exports/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

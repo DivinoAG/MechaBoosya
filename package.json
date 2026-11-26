@@ -1,17 +1,20 @@
 {
-  "name": "forumrankbot",
+  "name": "mecha-boosya",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Discord bot for Kemwer's server: forum post rankings, birthdays",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/supervisor.js",
     "dev": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.5"
+  },
   "dependencies": {
     "discord.js": "^14.21.0",
     "dotenv": "^17.0.0"

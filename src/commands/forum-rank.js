@@ -2,8 +2,7 @@ const { SlashCommandBuilder, ChannelType, MessageFlags, PermissionsBitField } = 
 const { fetchForumThreads, fetchInitialMessage } = require('../utils/discord-api');
 const { generateReportString } = require('../utils/report-generator');
 const { formatDiscordMessage } = require('../utils/message-formatter');
-const fs = require('fs');
-const path = require('path');
+const { writeRankingExport, pruneExports } = require('../utils/exports');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -95,9 +94,19 @@ module.exports = {
             // Apply limit if specified
             const finalThreadData = numberOfPosts ? threadData.slice(0, numberOfPosts) : threadData;
 
-            const debugFilePath = path.resolve(process.cwd(), 'post_data_debug.json');
-            fs.writeFileSync(debugFilePath, JSON.stringify(threadData, null, 2));
-            console.log(`Debug data written to ${debugFilePath}`);
+            // Archive the full sorted list (unlimited) for the wiki ingest; the report below is truncated.
+            try {
+                const exportFile = writeRankingExport(channel.id, threadData, {
+                    channelName: channel.name,
+                    requestedBy: interaction.user.id,
+                    limit: numberOfPosts || null,
+                });
+                console.log(`Ranking export written to ${exportFile}`);
+                const pruned = pruneExports();
+                if (pruned.length > 0) console.log(`Pruned ${pruned.length} expired export(s)`);
+            } catch (exportError) {
+                console.error('Failed to write ranking export:', exportError);
+            }
 
             const chunkSize = 50;
             for (let i = 0; i < finalThreadData.length; i += chunkSize) {
