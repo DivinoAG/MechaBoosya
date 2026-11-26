@@ -30,7 +30,8 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 | `commands/birthday.js` | yes | permission gating, self vs manager edits, duplicate and invalid dates |
 | `commands/birthday-config.js` | yes | gating, timezone validation, monthly mode, channel reachability |
 | `commands/forum-rank*.js`, `help.js` | no | permission gating untested |
-| `index.js` | no | command loader, interaction routing, SIGTERM drain |
+| `runtime.js` | yes | loader skips, unknown command, failure replies, drain refusal, button routing |
+| `index.js` | no | discord.js wiring only; the logic it used to hold now lives in `runtime.js` |
 | `supervisor.js` | yes | deploy transaction, rollback, auth, crash recovery |
 | `utils/discord-api.js` | no | thread/message fetching primitives |
 
