@@ -124,6 +124,10 @@ function openStore(file = process.env.DB_PATH || '/data/db/mecha-boosya.sqlite')
             `).run(guildId, month, channelId, messageId, new Date().toISOString());
         },
 
+        clearMonthlyPost(guildId) {
+            db.prepare('DELETE FROM monthly_posts WHERE guild_id = ?').run(guildId);
+        },
+
         snapshotTo(file) {
             fs.mkdirSync(path.dirname(file), { recursive: true });
             db.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);

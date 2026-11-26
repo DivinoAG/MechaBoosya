@@ -35,7 +35,7 @@ Ranking options: `channel` (required), `number_of_posts`, `direct_message`.
 
 **Birthdays.** Announcements fire once per person per day after 00:05 in the guild's time zone, so a boot at any hour catches up the same day; a unique `(guild, user, date)` row is the dedupe guard and a failed send is retried on the next tick. Feb 29 is celebrated on Mar 1 in non-leap years. The birthday role is synced once a day: members celebrating get it, everybody else loses it. The bot's role must sit above the birthday role.
 
-**Monthly digest.** On the last day of a month the bot posts the upcoming month's list, pins it, and then edits that same message once a day while the month runs, so late registrations appear without a new post. On rollover the previous message is unpinned and the next one is posted. One message per guild, tracked in `monthly_posts`; needs **Manage Messages** to pin.
+**Monthly digest.** On the last day of a month the bot posts the upcoming month's list, pins it, and then edits that same message once a day while the month runs, so late registrations appear without a new post. On rollover the previous message is unpinned and the next one is posted. **Changing the target channel deletes the old post and posts a new one there**, and switching the feature to `off` removes the pinned post. One message per guild, tracked in `monthly_posts`; needs **Manage Messages** to pin.
 
 **Archive.** A Hermes cron job (`/opt/data/scripts/mecha-boosya-ingest.sh`, every 15 min) copies new ranking exports into `llm-wiki/raw/cosplay-wishlist/<yyyy>/<mm>/` and pushes the wiki repo when something changed; a daily job (03:00) also refreshes `llm-wiki/raw/mecha-boosya/db/latest.sqlite`. Both are silent unless they do something or the health check fails.
 

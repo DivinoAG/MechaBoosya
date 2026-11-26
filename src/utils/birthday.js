@@ -102,6 +102,14 @@ function nextMonth(month) {
     return month === 12 ? 1 : month + 1;
 }
 
+// What to do with the pinned monthly message: refresh it, move it, or post a new one.
+function monthlyAction(existing, { channelId, targetMonth }) {
+    if (!existing) return 'post';
+    if (existing.channel_id !== channelId) return 'move';
+    if (existing.month !== targetMonth) return 'rollover';
+    return 'refresh';
+}
+
 // Pinned "upcoming birthdays" post: everyone registered in that month, nothing else.
 function monthlyMessage(month, entries) {
     const inMonth = entries.filter(entry => entry.month === month);
@@ -220,6 +228,7 @@ module.exports = {
     pageButtons,
     isLastDayOfMonth,
     nextMonth,
+    monthlyAction,
     monthlyMessage,
     announcementMessage,
     birthdayListMessage,

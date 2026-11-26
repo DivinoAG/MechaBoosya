@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DEFAULT_TIMEZONE, ANNOUNCE_AFTER_MINUTE, zonedParts, dateKey, matchesToday, announcementMessage, isLastDayOfMonth, nextMonth, monthlyMessage, MONTHS } = require('./birthday');
+const { DEFAULT_TIMEZONE, ANNOUNCE_AFTER_MINUTE, zonedParts, dateKey, matchesToday, announcementMessage, isLastDayOfMonth, nextMonth, monthlyAction, monthlyMessage, MONTHS } = require('./birthday');
 const { pruneExports } = require('./exports');
 const { notify } = require('./guild-log');
 
@@ -16,16 +16,35 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
 
     // One pinned message per guild: posted on the last day of the month for the month ahead,
     // refreshed once a day while that month runs, old one unpinned on rollover.
+    async function removeMonthlyMessage(existing) {
+        const channel = await client.channels.fetch(existing.channel_id).catch(() => null);
+        const message = channel ? await channel.messages.fetch(existing.message_id).catch(() => null) : null;
+        if (!message) return false;
+        await message.unpin().catch(() => {});
+        await message.delete().catch(error => console.warn('[monthly] delete failed:', error.message));
+        return true;
+    }
+
     async function syncMonthly(settings, todayParts, key) {
         const mode = settings.monthly_mode || 'announcement';
-        if (mode === 'off') return;
+        const existing = store.getMonthlyPost(guildId);
+
+        // Turning the feature off removes the pinned post instead of leaving it stranded.
+        if (mode === 'off') {
+            if (existing) {
+                await removeMonthlyMessage(existing);
+                store.clearMonthlyPost(guildId);
+                console.log('[monthly] disabled, removed the pinned post');
+            }
+            return;
+        }
 
         const channelId = mode === 'custom' ? settings.monthly_channel : settings.announcement_channel;
         if (!channelId) return;
 
         const targetMonth = isLastDayOfMonth(todayParts) ? nextMonth(todayParts.month) : todayParts.month;
         const payload = monthlyMessage(targetMonth, store.listBirthdays(guildId));
-        const existing = store.getMonthlyPost(guildId);
+        const action = monthlyAction(existing, { channelId, targetMonth });
 
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) {
@@ -33,7 +52,7 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
             return;
         }
 
-        if (existing && existing.month === targetMonth && existing.channel_id === channelId) {
+        if (action === 'refresh') {
             if (lastMonthlyRefresh === key) return;
             const message = await channel.messages.fetch(existing.message_id).catch(() => null);
             if (message) {
@@ -43,7 +62,11 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
             }
         }
 
-        if (existing) {
+        if (action === 'move') {
+            // Channel changed: delete the old post so no orphan stays behind.
+            const removed = await removeMonthlyMessage(existing);
+            console.log(`[monthly] channel changed, ${removed ? 'removed' : 'could not remove'} the old post`);
+        } else if (action === 'rollover') {
             const oldChannel = await client.channels.fetch(existing.channel_id).catch(() => null);
             const old = oldChannel ? await oldChannel.messages.fetch(existing.message_id).catch(() => null) : null;
             if (old) await old.unpin().catch(error => console.warn('[monthly] unpin failed:', error.message));
@@ -53,7 +76,7 @@ function startBirthdayScheduler(client, { store, guildId, exportDir = process.en
         await message.pin().catch(error => console.warn('[monthly] pin failed:', error.message));
         store.setMonthlyPost({ guildId, month: targetMonth, channelId, messageId: message.id });
         lastMonthlyRefresh = key;
-        console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id}`);
+        console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id} in ${channelId} (${action})`);
         await notify(client, store, guildId, `📅 Posted the upcoming birthdays of ${MONTHS[targetMonth - 1]}`);
     }
 
