@@ -1,0 +1,20 @@
+name: test
+
+# Second gate: the pre-commit hook lives in a clone and can be bypassed with --no-verify.
+# This runs on every push, whatever the machine.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --omit=dev
+      - run: find src -name '*.js' -exec node --check {} \;
+      - run: npm test -- --test-reporter=spec
