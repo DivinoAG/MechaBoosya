@@ -59,13 +59,19 @@ guild.
 
 ## The commit gate
 
-`.githooks/pre-commit` runs `node --check` over `src/` and then the full suite, and refuses the
-commit if either fails. `core.hooksPath` is set by the `prepare` script, so a fresh clone gets it
-on `npm install`; without npm, run `git config core.hooksPath .githooks` once.
+`.githooks/pre-commit` runs, in order: `biome lint src`, `tsc --noEmit`, `node --check` over
+`src/`, then the full suite — and refuses the commit if any fails. `core.hooksPath` is set by the
+`prepare` script, so a fresh clone gets it on `npm install`; without npm, run
+`git config core.hooksPath .githooks` once.
 
 - `git commit --no-verify` exists and is a deliberate exception, not a convenience. The deploy
-  path applies its own syntax gate but does not run the suite, so a red commit can still reach
-  the bot — say in the commit message why the gate was bypassed.
+  path applies its own syntax gate but runs neither the suite nor the checker, so a bad commit
+  can still reach the bot — say in the commit message why the gate was bypassed.
 - The gate covers commits, not pushes. Anyone pushing from another clone without the hook runs
-  unverified, which is why `TESTING.md` is the rule and the hook is only the enforcement of it.
+  unverified, which is why the GitHub Actions workflow runs the same four checks on every push.
+- `npm run test:coverage` enforces floors (80 lines / 78 branches / 80 functions). Raising the
+  floors is the point of measuring; lowering one needs a reason in the commit.
+- `tsc` checks `src/**/*.js` and **excludes** `*.test.js`: the stubs fake Discord objects and
+  would need casts to type-check, which buys nothing. Test correctness is the suite's job.
+
 
