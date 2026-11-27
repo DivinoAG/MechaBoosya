@@ -9,6 +9,16 @@ const CACHE_TTL_MS = Number(process.env.CACHE_TTL_HOURS || 3) * 3_600_000;
 const FETCH_DELAY_MS = Number(process.env.FETCH_DELAY_MS || 200);
 const PROGRESS_MIN_POSTS = Number(process.env.PROGRESS_MIN_POSTS || 50);
 const PROGRESS_INTERVAL_MS = Number(process.env.PROGRESS_INTERVAL_MS || 5_000);
+// Past this many unreadable posts the forum is not really readable: reading the rest is wasted time.
+const MAX_UNREADABLE_POSTS = Number(process.env.MAX_UNREADABLE_POSTS || 20);
+
+class ScanAborted extends Error {
+    constructor(failures, scanned) {
+        super(`aborted after ${failures} unreadable posts (${scanned} checked)`);
+        this.failures = failures;
+        this.scanned = scanned;
+    }
+}
 
 // Module-level so every command invocation in this process shares one scan per channel.
 const scans = createScanCoordinator();
@@ -89,6 +99,8 @@ async function scanForum(channel, progress, { requestedBy, limit, api }) {
         }
 
         progress.done += 1;
+
+        if (failures > MAX_UNREADABLE_POSTS) throw new ScanAborted(failures, progress.done);
         await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
     }
 
@@ -232,6 +244,14 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
         }
 
     } catch (error) {
+        if (error instanceof ScanAborted) {
+            console.error(`[ranking] ${error.message} — giving up rather than reading the rest`);
+            return interaction.editReply({
+                content: `⚠️ Stopped after ${error.failures} unreadable posts — this forum looks inaccessible right now. Nothing was ranked.`,
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+
         console.error('Error processing top-posts command:', error);
         await interaction.editReply({
             content: 'An error occurred while processing your request. Please try again later.',
