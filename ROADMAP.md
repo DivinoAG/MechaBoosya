@@ -97,6 +97,12 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       shell inside the container. Twice now the question "did that variable land?" had no answer.
       The values are imported from the modules that loaded them, not re-read from the environment,
       so the report cannot disagree with the behaviour; a child-process test proves env → file.
+- [x] **D5. README kept true.** The configuration table listed a `LOG_LEVEL` that does not exist and
+      omitted eleven real variables. Documented every one, grouped by owner, plus the behaviours added
+      since (unreadable-post footer and abort, refresh button, `stats.json` with its config block, the
+      drill, the gates). A test compares the variables read in `src/` against the README table, in both
+      directions, so the next variable cannot ship undocumented. The test itself needed fixing
+      once: it read the default column as a variable name and flagged `UTC`.
 - [x] **D3. `stats.json` next to the exports.** Written on boot and after every
       registration/removal or announcement, carrying `generatedAt`, `guildId`, `birthdays` and
       `announcements`. The live DB sits inside the container, so without this any count quoted
