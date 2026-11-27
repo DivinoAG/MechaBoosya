@@ -25,14 +25,22 @@ async function handleListButton(interaction, store) {
 
     // Reuse the attachment already on the message rather than uploading it on every click.
     // A component interaction can carry a partial message, so fetch it before giving up.
+    const cached = interaction.message?.attachments?.size ?? 0;
     let imageUrl = interaction.message?.attachments?.first?.()?.url ?? null;
+    let fetchedCount = null;
     if (!imageUrl && interaction.message?.fetch) {
         const full = await interaction.message.fetch().catch(() => null);
+        fetchedCount = full?.attachments?.size ?? null;
         imageUrl = full?.attachments?.first?.()?.url ?? null;
     }
-    console.log(`[list] ${imageUrl ? 'reusing' : 'uploading'} the birthday image (guild ${interaction.guildId})`);
+    console.log(`[list] guild=${interaction.guildId} cachedAttachments=${cached} fetchedAttachments=${fetchedCount} -> ${imageUrl ? 'reusing' : 'uploading'}`);
 
-    return interaction.editReply(birthdayListMessage(interaction.guild.name, entries, { page, imageUrl }));
+    const payload = birthdayListMessage(interaction.guild.name, entries, { page, imageUrl });
+    // Explicitly replace any attachment this message already had, so repeated clicks cannot
+    // pile up copies of the same image.
+    if (payload.files && cached > 0) payload.attachments = [];
+
+    return interaction.editReply(payload);
 }
 
 module.exports = { handleListButton };
