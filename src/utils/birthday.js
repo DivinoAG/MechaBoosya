@@ -179,7 +179,7 @@ function pageButtons(page, pageCount) {
     // Refresh is first: it is the only button present on every list, single page or not.
     const buttons = [new ButtonBuilder()
         .setCustomId(`blist:refresh:${page}`)
-        .setEmoji('♻️')
+        .setEmoji('🔄️')
         .setStyle(ButtonStyle.Secondary)];
 
     if (pageCount > 1) {

@@ -46,6 +46,7 @@ test('single page shows only the refresh button and says page 1/1', () => {
     // Scope change: one page still needs a way to pick up birthdays added since it was posted.
     const ids = message.components.flatMap(row => row.components.map(c => c.data.custom_id));
     assert.deepStrictEqual(ids, ['blist:refresh:0']);
+    assert.strictEqual(message.components[0].components[0].data.emoji.name, '🔄️');
     assert.strictEqual(message.embeds[0].data.footer.text, '3 birthday(s) registered · Page 1/1');
 });
 
