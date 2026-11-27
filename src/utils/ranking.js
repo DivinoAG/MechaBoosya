@@ -260,4 +260,12 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
     }
 }
 
-module.exports = { runRanking, addRankingOptions, progressText, requester, CACHE_TTL_MS };
+// The values this process actually runs with, so they can be reported without guessing.
+const RANKING_LIMITS = {
+    maxUnreadablePosts: MAX_UNREADABLE_POSTS,
+    cacheTtlHours: CACHE_TTL_MS / 3_600_000,
+    fetchDelayMs: FETCH_DELAY_MS,
+    progressMinPosts: PROGRESS_MIN_POSTS,
+};
+
+module.exports = { runRanking, addRankingOptions, progressText, requester, CACHE_TTL_MS, RANKING_LIMITS };

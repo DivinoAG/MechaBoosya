@@ -6,6 +6,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { effectiveConfig } = require('./config');
 
 function statsDir() {
     return process.env.EXPORT_DIR || path.resolve(process.cwd(), 'exports');
@@ -24,6 +25,7 @@ function writeStats(store, guildId) {
             guildId,
             birthdays: store.listBirthdays(guildId).length,
             announcements: store.countAnnouncements(guildId),
+            config: effectiveConfig(),
         };
 
         fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));

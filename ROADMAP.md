@@ -91,6 +91,12 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       Live run: 30 birthdays in the backup, 45 live, 15 registered since the snapshot — OK.
 - [x] **D2. Dependabot.** `.github/dependabot.yml`: npm dev dependencies weekly, grouped into one
       PR for minor and patch updates; GitHub Actions monthly.
+- [x] **D4. Effective configuration in `stats.json`.** The values the process actually loaded —
+      `maxUnreadablePosts`, `cacheTtlHours`, `fetchDelayMs`, `progressMinPosts`, `announceMinuteOfDay` —
+      written with the counts, so a compose or `.env` change is provable with one `cat` instead of a
+      shell inside the container. Twice now the question "did that variable land?" had no answer.
+      The values are imported from the modules that loaded them, not re-read from the environment,
+      so the report cannot disagree with the behaviour; a child-process test proves env → file.
 - [x] **D3. `stats.json` next to the exports.** Written on boot and after every
       registration/removal or announcement, carrying `generatedAt`, `guildId`, `birthdays` and
       `announcements`. The live DB sits inside the container, so without this any count quoted
