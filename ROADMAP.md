@@ -28,6 +28,9 @@ one branch per item, merge to `main` only when the suite, lint and types are gre
 - [ ] **A6. Scheduler monthly/role paths.** `monthlyAction` move/rollover/off and the role sync
       (grant today's celebrants, strip everyone else, skip when the role sits below the bot's).
 - [ ] **A7. Raise the coverage floors** once A1–A6 land; target 88/85/88.
+- [ ] **A8. Quiet test output.** Modules log to `console` directly, so the suite prints
+      `[list] page … reloaded`, `[birthday] announced …` and monthly lines. Accept `log` in those
+      modules (as `runtime.js` already does) and pass a silent stub from tests.
 
 ## B. Deploy safety
 
