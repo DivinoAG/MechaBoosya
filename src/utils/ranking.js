@@ -63,19 +63,29 @@ async function scanForum(channel, progress, { requestedBy, limit, api }) {
 
     const defaultReactionEmoji = channel.defaultReactionEmoji;
     const threadData = [];
+    // A post we cannot read is not a post with zero votes: it is missing, and saying so is the
+    // difference between a ranking and a lie.
+    let failures = 0;
 
     for (const thread of threads) {
-        const initialMessage = await api.fetchInitialMessage(thread);
-        if (initialMessage) {
-            const reaction = initialMessage.reactions.cache.find(
-                r => (defaultReactionEmoji.id && r.emoji.id === defaultReactionEmoji.id) ||
-                     (defaultReactionEmoji.name && r.emoji.name === defaultReactionEmoji.name)
-            );
-            threadData.push({
-                name: thread.name,
-                reactionCount: reaction ? reaction.count : 0,
-                tags: thread.appliedTags.map(tagId => channel.availableTags.find(tag => tag.id === tagId)?.name).filter(Boolean),
-            });
+        try {
+            const initialMessage = await api.fetchInitialMessage(thread);
+            if (!initialMessage) {
+                failures += 1;
+            } else {
+                const reaction = initialMessage.reactions.cache.find(
+                    r => (defaultReactionEmoji.id && r.emoji.id === defaultReactionEmoji.id) ||
+                         (defaultReactionEmoji.name && r.emoji.name === defaultReactionEmoji.name)
+                );
+                threadData.push({
+                    name: thread.name,
+                    reactionCount: reaction ? reaction.count : 0,
+                    tags: thread.appliedTags.map(tagId => channel.availableTags.find(tag => tag.id === tagId)?.name).filter(Boolean),
+                });
+            }
+        } catch (error) {
+            failures += 1;
+            console.error(`[ranking] could not read thread ${thread.id}: ${error.message}`);
         }
 
         progress.done += 1;
@@ -90,6 +100,7 @@ async function scanForum(channel, progress, { requestedBy, limit, api }) {
             channelName: channel.name,
             requestedBy,
             limit,
+            failures,
         });
         console.log(`Ranking export written to ${exportFile}`);
         const pruned = pruneExports();
@@ -98,7 +109,7 @@ async function scanForum(channel, progress, { requestedBy, limit, api }) {
         console.error('Failed to write ranking export:', exportError);
     }
 
-    return threadData;
+    return { threads: threadData, failures };
 }
 
 const DISCORD_API = { fetchForumThreads, fetchInitialMessage };
@@ -142,6 +153,7 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
 
     try {
         let threadData;
+        let failures = 0;
         /** @type {{ payload: any, ageMs: number, file: string } | null} */
         let cached = null;
 
@@ -173,7 +185,9 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
             });
 
             try {
-                threadData = await state.promise;
+                const result = await state.promise;
+                threadData = result.threads;
+                failures = result.failures;
             } finally {
                 await rendering;
             }
@@ -181,7 +195,21 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
 
         const sorted = [...threadData].sort((a, b) => b.reactionCount - a.reactionCount);
         const finalThreadData = numberOfPosts ? sorted.slice(0, numberOfPosts) : sorted;
-        const footer = cached ? `Cached results from ${formatAge(cached.ageMs)} ago` : null;
+        const footerParts = [];
+        if (cached) footerParts.push(`Cached results from ${formatAge(cached.ageMs)} ago`, `${threadData.length} posts`);
+        if (failures > 0) footerParts.push(`${failures} post${failures === 1 ? '' : 's'} unreadable`);
+        const footer = footerParts.length > 0 ? footerParts.join(' · ') : null;
+
+        // Nothing to report: the interaction is deferred, so it must be answered or the user
+        // stares at "thinking" until the token expires.
+        if (finalThreadData.length === 0) {
+            return interaction.editReply({
+                content: failures > 0
+                    ? `No posts could be read from #${channel.name} — ${failures} could not be read.`
+                    : `No posts found in #${channel.name}.`,
+                flags: MessageFlags.Ephemeral,
+            });
+        }
 
         const chunkSize = 50;
         for (let i = 0; i < finalThreadData.length; i += chunkSize) {

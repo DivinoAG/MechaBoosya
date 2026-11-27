@@ -177,9 +177,12 @@ function startBirthdayScheduler(client, {
             }
 
             try {
+                // Only when their 29 February is being celebrated on another day — i.e. the 1 March fallback.
+                const leapFallback = person.month === 2 && person.day === 29 && !(parts.month === 2 && parts.day === 29);
+
                 await channel.send({
                     content: settings.ping_role ? `<@&${settings.ping_role}>` : undefined,
-                    ...announcementMessage(person.user_id),
+                    ...announcementMessage(person.user_id, { leapFallback }),
                 });
                 store.recordAnnouncement(guildId, person.user_id, key);
                 writeStats(store, guildId);

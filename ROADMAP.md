@@ -98,19 +98,24 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
 
 ## E. Feature backlog
 
-- [ ] **E1. Survive a request that still fails.** `@discordjs/rest` already retries 5xx three times
+- [x] **E1. Survive a request that still fails.** `@discordjs/rest` already retries 5xx three times
       per request and backs off on 429, so the gap is what happens *after* those retries: skip the
       thread, finish the scan, and report it. The export records `failures`, the report footer says
       `· N posts unreadable`, and **a scan with failures is written but never served from cache** —
       a transient gap must not be baked in for six hours.
-- [ ] **E2. Cached-serve stats.** Footer shows age and post count only (`Cached results from 2h ago ·
+      Two things the tests forced: an unreadable post is not a zero-vote post, and a scan where
+      *every* post fails must still answer the interaction — the chunk loop never ran, so a
+      deferred reply was left hanging until its token expired.
+- [x] **E2. Cached-serve stats.** Footer shows age and post count only (`Cached results from 2h ago ·
       263 posts`). The requester stays in `bot.log`, never in a public message.
 - [x] ~~**E3. `/birthday next`**~~ — **dropped.** The pinned monthly post already answers "what's
       coming up"; a second on-demand view duplicates it with a different shape.
-- [ ] **E4. Feb 29, three surfaces.** `/birthday list`, the monthly post and `/birthday show` always
+- [x] **E4. Feb 29, three surfaces.** `/birthday list`, the monthly post and `/birthday show` always
       print the **birth date** — 29 February — with no note, leap year or not. Only the celebration
       post carries the explanation, and only when the current local year (guild timezone) has no
-      29 February, because that is the one message about *this year's* celebration.
+      29 February, because that is the one message about *this year's* celebration. It fires only
+      when the celebration day is not 29 February — the first version added the note on the real
+      day in a leap year too, which the scheduler test caught.
 
 ## Decisions taken
 
