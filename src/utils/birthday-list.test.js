@@ -89,7 +89,8 @@ test('page buttons number the pages and mark the active one disabled', () => {
 
     // Scope change: refresh comes first because it is the only button always present.
     assert.deepStrictEqual(buttons.map(b => b.data.custom_id), ['blist:refresh:1', 'blist:0', 'blist:1', 'blist:2']);
-    const numbered = buttons.filter(b => b.data.label);
+    // Refresh now carries a label too, so the numbered pages are picked by custom id.
+    const numbered = buttons.filter(b => /^blist:\d+$/.test(b.data.custom_id));
     assert.deepStrictEqual(numbered.map(b => b.data.label), ['1', '2', '3']);
 
     const active = buttons.find(b => b.data.custom_id === 'blist:1');
