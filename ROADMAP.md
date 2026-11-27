@@ -86,12 +86,12 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
 
 - [ ] **D1. Restore drill.** Load `raw/mecha-boosya/db/latest.sqlite` into a throwaway store and
       assert the birthday count matches the live number. A backup never restored is a hypothesis.
+- [ ] **D2. Dependabot** for the dev dependencies (Biome, TypeScript, `@types/node`), weekly,
+      grouped into one PR.
 - [x] **D3. `stats.json` next to the exports.** Written on boot and after every
       registration/removal or announcement, carrying `generatedAt`, `guildId`, `birthdays` and
       `announcements`. The live DB sits inside the container, so without this any count quoted
       from outside is only as fresh as the daily snapshot — a real 45 was reported as 30.
-- [ ] **D2. Dependabot** for the dev dependencies (Biome, TypeScript, `@types/node`), weekly,
-      grouped into one PR.
 
 ## E. Feature backlog
 
