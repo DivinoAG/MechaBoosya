@@ -23,26 +23,15 @@ async function handleListButton(interaction, store) {
         return interaction.editReply({ content: 'No birthdays registered in this server yet.', embeds: [], components: [] });
     }
 
-    // Reuse the attachment already on the message rather than uploading it on every click.
-    // A component interaction can carry a partial message, so fetch it before giving up.
-    const cached = interaction.message?.attachments?.size ?? 0;
-    let imageUrl = interaction.message?.attachments?.first?.()?.url ?? null;
-    let fetchedCount = null;
-    if (!imageUrl && interaction.message?.fetch) {
-        const full = await interaction.message.fetch().catch(() => null);
-        fetchedCount = full?.attachments?.size ?? null;
-        imageUrl = full?.attachments?.first?.()?.url ?? null;
-    }
-    console.log(`[list] guild=${interaction.guildId} cachedAttachments=${cached} fetchedAttachments=${fetchedCount} -> ${imageUrl ? 'reusing' : 'uploading'}`);
-
+    // Discord does not report the attachments of a webhook-edited message, so the image is
+    // always re-sent; clearing `attachments` makes that a replacement instead of an append,
+    // keeping exactly one copy however often the button is pressed.
+    const imageUrl = interaction.message?.attachments?.first?.()?.url ?? null;
     const payload = birthdayListMessage(interaction.guild.name, entries, { page, imageUrl });
-    // Explicitly replace any attachment this message already had, so repeated clicks cannot
-    // pile up copies of the same image.
-    if (payload.files && cached > 0) payload.attachments = [];
+    if (payload.files) payload.attachments = [];
 
-    const edited = await interaction.editReply(payload);
-    console.log(`[list] after edit: attachments=${edited?.attachments?.size ?? 'n/a'} filesSent=${payload.files ? payload.files.length : 0}`);
-    return edited;
+    console.log(`[list] page ${page + 1}/${payload.pageCount} rebuilt for guild ${interaction.guildId} (${imageUrl ? 'reusing image' : 're-uploading image'})`);
+    return interaction.editReply(payload);
 }
 
 module.exports = { handleListButton };
