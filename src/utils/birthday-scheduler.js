@@ -82,12 +82,17 @@ function startBirthdayScheduler(client, {
             if (old) await old.unpin().catch(error => console.warn('[monthly] unpin failed:', error.message));
         }
 
-        const message = await channel.send(payload);
-        await message.pin().catch(error => console.warn('[monthly] pin failed:', error.message));
-        store.setMonthlyPost({ guildId, month: targetMonth, channelId, messageId: message.id });
-        store.setSetting(guildId, 'monthly_last_refresh', key);
-        console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id} in ${channelId} (${action})`);
-        await notify(client, store, guildId, `📅 Posted the upcoming birthdays of ${MONTHS[targetMonth - 1]}`);
+        try {
+            const message = await channel.send(payload);
+            await message.pin().catch(error => console.warn('[monthly] pin failed:', error.message));
+            store.setMonthlyPost({ guildId, month: targetMonth, channelId, messageId: message.id });
+            store.setSetting(guildId, 'monthly_last_refresh', key);
+            console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id} in ${channelId} (${action})`);
+            await notify(client, store, guildId, `📅 Posted the upcoming birthdays of ${MONTHS[targetMonth - 1]}`);
+        } catch (error) {
+            // A channel that refuses the post must not abort the role sync or the snapshot.
+            console.error('[monthly] could not post the list:', error.message);
+        }
     }
 
     // Birthday role is synced once per day (and once per boot); members who left are skipped.

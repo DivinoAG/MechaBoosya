@@ -7,7 +7,7 @@
     "start": "node src/supervisor.js",
     "dev": "node src/index.js",
     "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=78 --test-coverage-functions=80",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=94 --test-coverage-branches=83 --test-coverage-functions=82",
     "lint": "biome lint src",
     "typecheck": "tsc --noEmit",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"

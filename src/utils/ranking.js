@@ -56,8 +56,8 @@ function formatAge(ms) {
 }
 
 // The scan itself. Callers that arrive mid-scan share this run and its progress.
-async function scanForum(channel, progress, { requestedBy, limit }) {
-    const threads = await fetchForumThreads(channel);
+async function scanForum(channel, progress, { requestedBy, limit, api }) {
+    const threads = await api.fetchForumThreads(channel);
     progress.total = threads.length;
     console.log(`Found ${threads.length} threads in total.`);
 
@@ -65,7 +65,7 @@ async function scanForum(channel, progress, { requestedBy, limit }) {
     const threadData = [];
 
     for (const thread of threads) {
-        const initialMessage = await fetchInitialMessage(thread);
+        const initialMessage = await api.fetchInitialMessage(thread);
         if (initialMessage) {
             const reaction = initialMessage.reactions.cache.find(
                 r => (defaultReactionEmoji.id && r.emoji.id === defaultReactionEmoji.id) ||
@@ -101,7 +101,10 @@ async function scanForum(channel, progress, { requestedBy, limit }) {
     return threadData;
 }
 
-async function runRanking(interaction, { force = false } = {}) {
+const DISCORD_API = { fetchForumThreads, fetchInitialMessage };
+
+// `api` is injectable so tests can drive the whole flow without a Discord connection.
+async function runRanking(interaction, { force = false, api = DISCORD_API } = {}) {
     if (!interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
         return interaction.reply({
             content: 'You do not have permission to use this command.',
@@ -156,6 +159,7 @@ async function runRanking(interaction, { force = false } = {}) {
             const { state, joined } = scans.join(channel.id, progress => scanForum(channel, progress, {
                 requestedBy: interaction.user.id,
                 limit: numberOfPosts || null,
+                api,
             }));
             if (joined) console.log(`Joined the running scan for ${channel.id} — ${requester(interaction)}`);
 

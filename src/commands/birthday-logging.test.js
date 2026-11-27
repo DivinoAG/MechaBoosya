@@ -1,5 +1,7 @@
 'use strict';
 
+require('../test-support/quiet-console').quietConsole();
+
 // The audit trail must never be on the answer's critical path. At 20:25 a /birthday that
 // awaited its log-channel delivery took 3.8 s, the interaction expired, and the user got
 // nothing at all.

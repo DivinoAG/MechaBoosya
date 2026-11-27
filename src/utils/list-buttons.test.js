@@ -1,5 +1,7 @@
 'use strict';
 
+require('../test-support/quiet-console').quietConsole();
+
 const test = require('node:test');
 const assert = require('node:assert');
 
