@@ -18,7 +18,6 @@ function startBirthdayScheduler(client, {
     let busy = false;
     let lastSnapshot = null;
     let lastRoleSync = null;
-    let lastMonthlyRefresh = null;
 
     // One pinned message per guild: posted on the last day of the month for the month ahead,
     // refreshed once a day while that month runs, old one unpinned on rollover.
@@ -59,12 +58,14 @@ function startBirthdayScheduler(client, {
         }
 
         if (action === 'refresh') {
-            if (lastMonthlyRefresh === key) return;
+            // Persisted, not in-memory: a deploy restarts the process several times a day and
+            // each boot would otherwise re-edit the pinned post.
+            if (store.getSetting(guildId, 'monthly_last_refresh') === key) return;
             const message = await channel.messages.fetch(existing.message_id).catch(() => null);
             if (message) {
                 await message.edit(payload).catch(error => console.error('[monthly] edit failed:', error.message));
                 console.log(`[monthly] refreshed ${MONTHS[targetMonth - 1]} list (${existing.message_id})`);
-                lastMonthlyRefresh = key;
+                store.setSetting(guildId, 'monthly_last_refresh', key);
                 return;
             }
         }
@@ -82,7 +83,7 @@ function startBirthdayScheduler(client, {
         const message = await channel.send(payload);
         await message.pin().catch(error => console.warn('[monthly] pin failed:', error.message));
         store.setMonthlyPost({ guildId, month: targetMonth, channelId, messageId: message.id });
-        lastMonthlyRefresh = key;
+        store.setSetting(guildId, 'monthly_last_refresh', key);
         console.log(`[monthly] posted ${MONTHS[targetMonth - 1]} list as ${message.id} in ${channelId} (${action})`);
         await notify(client, store, guildId, `📅 Posted the upcoming birthdays of ${MONTHS[targetMonth - 1]}`);
     }

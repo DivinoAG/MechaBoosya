@@ -40,7 +40,9 @@ async function handleListButton(interaction, store) {
     // pile up copies of the same image.
     if (payload.files && cached > 0) payload.attachments = [];
 
-    return interaction.editReply(payload);
+    const edited = await interaction.editReply(payload);
+    console.log(`[list] after edit: attachments=${edited?.attachments?.size ?? 'n/a'} filesSent=${payload.files ? payload.files.length : 0}`);
+    return edited;
 }
 
 module.exports = { handleListButton };

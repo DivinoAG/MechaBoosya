@@ -107,6 +107,44 @@ test('Feb 29 is announced on Mar 1 only in non-leap years', async () => {
     assert.strictEqual(leapFeb29.client.sent.length, 1, 'their actual day');
 });
 
+test('a restart does not re-edit the monthly post on the same day', async () => {
+    const store = openStore(':memory:');
+    store.setSetting('g1', 'announcement_channel', 'c1');
+    store.setSetting('g1', 'monthly_mode', 'announcement');
+    store.setSetting('g1', 'timezone', 'UTC');
+
+    const edits = [];
+    const client = {
+        channels: {
+            fetch: async id => ({
+                id,
+                send: async () => ({ id: 'm1', pin: async () => {} }),
+                messages: {
+                    fetch: async () => ({ id: 'm1', edit: async () => { edits.push(Date.now()); }, unpin: async () => {} }),
+                },
+            }),
+        },
+        guilds: { fetch: async () => ({ roles: { fetch: async () => null } }) },
+    };
+
+    // A post that already exists for this month and channel: the action is 'refresh'.
+    store.setMonthlyPost({ guildId: 'g1', month: 11, channelId: 'c1', messageId: 'm1' });
+
+    const at = '2026-11-26T14:00:00Z';
+    const options = { store, guildId: 'g1', exportDir: null, runOnStart: false, now: () => new Date(at) };
+
+    // Two instances stand in for a restart: the guard has to survive the process.
+    const first = startBirthdayScheduler(client, options);
+    await first.tick();
+    first.stop();
+
+    const second = startBirthdayScheduler(client, options);
+    await second.tick();
+    second.stop();
+
+    assert.strictEqual(edits.length, 1, `the pinned post was edited ${edits.length} times in one day`);
+});
+
 test('the guild timezone decides which day it is', async () => {
     const entries = [{ userId: 'u1', month: 5, day: 4 }];
 
