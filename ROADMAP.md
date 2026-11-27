@@ -1,8 +1,13 @@
 # MechaBoosya roadmap
 
-Living checklist of agreed work. New items go at the bottom of their section; finished items keep
-their line and get `[x]` plus the commit. Rules for whoever executes: tests first (`TESTING.md`),
-one branch per item, merge to `main` only when the suite, lint and types are green.
+Living checklist of agreed work. Rules for whoever executes:
+
+- **An item is written here as `[ ]` before the work starts**, not after it ships. This file is the
+  plan; a checklist updated only at the end is a log, and a log cannot be reviewed or reordered.
+- Finished items keep their line and get `[x]` plus the commit.
+- Tests first (`TESTING.md`), one branch per item, merge to `main` only when lint, types and tests pass.
+- Items already agreed but not started stay at the bottom of their section, so "what's next" is
+  always answerable from this file alone.
 
 ## Status
 
