@@ -116,6 +116,13 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       29 February, because that is the one message about *this year's* celebration. It fires only
       when the celebration day is not 29 February — the first version added the note on the real
       day in a leap year too, which the scheduler test caught.
+- [x] **E5. Stop a scan that is failing wholesale.** More than 20 unreadable posts at any point means
+      the forum is not really readable, so the scan aborts instead of fetching the remaining hundreds:
+      no export, no partial ranking, one message naming the count. Cap tunable via
+      `MAX_UNREADABLE_POSTS`. Known trade-off: scattered failures late in a large scan also trip it;
+      if that turns out to be the wrong rule, the alternative is consecutive failures.
+      Implemented with a typed `ScanAborted`: no export is written, the ranking is not delivered, and
+      a second caller waiting on the same scan gets the same message instead of hanging.
 
 ## Decisions taken
 

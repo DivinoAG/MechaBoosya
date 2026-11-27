@@ -387,3 +387,47 @@ test('a clean cached serve shows the age and the post count, never the requester
     assert.match(footer, /3 posts/);
     assert.doesNotMatch(footer, /the-person-who-asked|u1/, 'the requester stays in the log');
 });
+
+test('a scan that keeps failing is abandoned instead of reading hundreds of posts', async () => {
+    const dir = tempExports();
+    let attempts = 0;
+
+    const api = {
+        fetchForumThreads: async () => posts(Array.from({ length: 300 }, (_, i) => i)),
+        fetchInitialMessage: async () => { attempts += 1; throw new Error('403 Missing Access'); },
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    assert.ok(attempts <= 21, `stopped early, attempted ${attempts} of 300`);
+    assert.deepStrictEqual(exportFiles(dir), [], 'nothing is archived from a blind scan');
+    assert.match(i.sends.at(-1)[1].content, /unreadable/i, 'and the user is told why');
+});
+
+test('the abort message names how many could not be read', async () => {
+    const api = {
+        fetchForumThreads: async () => posts(Array.from({ length: 60 }, (_, i) => i)),
+        fetchInitialMessage: async () => null,
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    assert.match(i.sends.at(-1)[1].content, /21/);
+});
+
+test('a second caller waiting on an aborted scan is told the same thing', async () => {
+    const api = {
+        fetchForumThreads: async () => posts(Array.from({ length: 60 }, (_, i) => i)),
+        fetchInitialMessage: async () => null,
+    };
+    const channel = forumChannel();
+    const first = interaction(channel);
+    const second = interaction(channel);
+
+    await Promise.all([runRanking(first, { api }), runRanking(second, { api })]);
+
+    assert.match(first.sends.at(-1)[1].content, /unreadable/i);
+    assert.match(second.sends.at(-1)[1].content, /unreadable/i, 'the joiner is not left waiting');
+});
