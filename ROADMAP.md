@@ -109,3 +109,7 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
 - Refresh button: always visible, labelled `Refresh`, re-uploads the image and replaces the copy.
 - Tests are never fitted to the code; a test changes only when a requirement moves.
 - Per-repo SSH deploy key, no account-wide GitHub access; PRs skipped for that reason.
+- **No test for `.github/dependabot.yml`.** GitHub validates it on push and surfaces errors in the
+  Dependabot tab; a local test would need a YAML parser plus SchemaStore's schema and still miss
+  what GitHub enforces. The failure it would catch is slow and low-severity (dev dependencies
+  ageing), so the check is manual: no Dependabot PR within two weeks means the config is wrong.
