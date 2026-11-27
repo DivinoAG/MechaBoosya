@@ -76,3 +76,12 @@ test('announcement embeds the bundled image as an attachment', () => {
     assert.match(message.embeds[0].data.description, /<@123456789>/);
     assert.strictEqual(message.embeds[0].data.color, 0xbAd7e6);
 });
+
+test('the celebration post explains the fallback when a 29 February birthday lands on 1 March', () => {
+    const withNote = announcementMessage('u1', { leapFallback: true });
+    assert.match(withNote.embeds[0].data.description, /29 February/);
+    assert.match(withNote.embeds[0].data.description, /celebrated today/);
+
+    const plain = announcementMessage('u1');
+    assert.doesNotMatch(plain.embeds[0].data.description, /29 February/, 'an ordinary birthday says nothing extra');
+});

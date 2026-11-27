@@ -89,6 +89,8 @@ function findFreshExport(channelId, ttlMs, { dir = exportDir(), now = Date.now()
     try {
         const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
         if (!Array.isArray(payload.threads)) return null;
+        // A scan that lost posts is an archive, not a cache: the next request rescans.
+        if ((payload.failures ?? 0) > 0) return null;
         return { file, payload, ageMs };
     } catch {
         return null;

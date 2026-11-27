@@ -162,3 +162,17 @@ test('the guild timezone decides which day it is', async () => {
     after.scheduler.stop();
     assert.strictEqual(after.client.sent.length, 1);
 });
+
+test('the 1 March catch-up post mentions the fallback, the 29 February one does not', async () => {
+    const entries = [{ userId: 'leap', month: 2, day: 29 }];
+
+    const nonLeap = harness({ at: '2026-03-01T00:10:00Z', entries });
+    await nonLeap.scheduler.tick();
+    nonLeap.scheduler.stop();
+    assert.match(JSON.stringify(nonLeap.client.sent[0]), /29 February/, 'explained in a non-leap year');
+
+    const leap = harness({ at: '2028-02-29T00:10:00Z', entries });
+    await leap.scheduler.tick();
+    leap.scheduler.stop();
+    assert.doesNotMatch(JSON.stringify(leap.client.sent[0]), /29 February/, 'no note on the real day');
+});

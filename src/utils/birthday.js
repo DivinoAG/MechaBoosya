@@ -211,11 +211,17 @@ function pageButtons(page, pageCount) {
     return rows;
 }
 
-function announcementMessage(userId) {
+// `leapFallback` is set only when a 29 February birthday is celebrated on 1 March: the list and
+// the monthly post always show the birth date, so the explanation belongs to this post alone.
+function announcementMessage(userId, { leapFallback = false } = {}) {
     const embed = new EmbedBuilder()
         .setColor(ACCENT)
         .setTitle('🎂 Happy Birthday!')
-        .setDescription(`Today is a special day!\n🎁 Please wish <@${userId}> a happy birthday!`)
+        .setDescription([
+            'Today is a special day!',
+            `🎁 Please wish <@${userId}> a happy birthday!`,
+            ...(leapFallback ? ['', '🎂 Born on 29 February — celebrated today, because this year has no 29th.'] : []),
+        ].join('\n'))
         .setThumbnail(`attachment://${BIRTHDAY_IMAGE_NAME}`)
         .setFooter({ text: `MechaBoosya • ${new Date().toISOString().slice(0, 10)}` });
 

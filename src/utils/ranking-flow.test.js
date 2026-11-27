@@ -292,3 +292,98 @@ test('the cache footer switches to hours once the export is old enough', async (
     assert.strictEqual(api.calls.forum, 0);
     assert.ok(exportFiles(dir).length === 1);
 });
+
+test('a thread that cannot be read is skipped and the scan still finishes', async () => {
+    const dir = tempExports();
+    const threads = posts([5, 3, 1]);
+    const api = {
+        fetchForumThreads: async () => threads,
+        fetchInitialMessage: async thread => {
+            if (thread.id === '2') throw new Error('500 after retries');
+            return { reactions: { cache: { find: () => ({ count: thread.count }) } } };
+        },
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    const report = i.sends.find(([kind]) => kind === 'edit')[1];
+    assert.match(report.embeds[0].data.description, /post-1/, 'the readable posts are still reported');
+    assert.doesNotMatch(report.embeds[0].data.description, /post-2/, 'the unreadable one is not invented');
+
+    const written = JSON.parse(fs.readFileSync(exportFiles(dir)[0], 'utf8'));
+    assert.strictEqual(written.failures, 1, 'the export records the gap');
+    assert.strictEqual(written.count, 2, 'with only the rows that were read');
+});
+
+test('a thread with no starter message counts as unreadable', async () => {
+    const api = {
+        fetchForumThreads: async () => posts([4, 5]),
+        fetchInitialMessage: async thread => (thread.id === '2' ? null : { reactions: { cache: { find: () => ({ count: thread.count }) } } }),
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    const footer = i.sends.find(([kind]) => kind === 'edit')[1].embeds[0].data.footer;
+    assert.match(footer.text, /1 post unreadable/);
+});
+
+test('a scan where every post fails still answers the interaction', async () => {
+    const api = {
+        fetchForumThreads: async () => posts([1]),
+        fetchInitialMessage: async () => null,
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    const last = i.sends.at(-1);
+    assert.strictEqual(last[0], 'edit', 'a deferred reply must always be answered');
+    assert.match(last[1].content, /could not be read/);
+});
+
+test('the footer states how many posts could not be read', async () => {
+    const api = {
+        fetchForumThreads: async () => posts([1, 2, 3, 4]),
+        fetchInitialMessage: async thread => {
+            if (thread.id === '3' || thread.id === '4') throw new Error('gone');
+            return { reactions: { cache: { find: () => ({ count: thread.count }) } } };
+        },
+    };
+
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    const footer = i.sends.find(([kind]) => kind === 'edit')[1].embeds[0].data.footer;
+    assert.match(footer.text, /2 posts unreadable/, 'plural for more than one');
+});
+
+test('a scan with failures is written but never served from cache', async () => {
+    const dir = tempExports();
+    writeRankingExport('f1', [{ name: 'seed', reactionCount: 1, tags: [] }], { requestedBy: 'seed', failures: 2 });
+
+    const api = fakeApi(posts([3]));
+    await runRanking(interaction(forumChannel()), { api });
+
+    assert.strictEqual(api.calls.forum, 1, 'the incomplete export did not answer the request');
+    assert.ok(exportFiles(dir).length >= 2, 'and a complete one was written');
+});
+
+test('a clean cached serve shows the age and the post count, never the requester', async () => {
+    tempExports();
+    writeRankingExport('f1', [
+        { name: 'a', reactionCount: 3, tags: [] },
+        { name: 'b', reactionCount: 2, tags: [] },
+        { name: 'c', reactionCount: 1, tags: [] },
+    ], { channelName: 'posts', requestedBy: 'the-person-who-asked', limit: null });
+
+    const api = fakeApi(posts([1]));
+    const i = interaction(forumChannel());
+    await runRanking(i, { api });
+
+    const footer = i.sends.find(([kind]) => kind === 'edit')[1].embeds[0].data.footer.text;
+    assert.match(footer, /Cached results from \d+m ago/);
+    assert.match(footer, /3 posts/);
+    assert.doesNotMatch(footer, /the-person-who-asked|u1/, 'the requester stays in the log');
+});
