@@ -182,6 +182,8 @@ function pageButtons(page, pageCount) {
         // 🔄 is U+1F504 with emoji presentation already; appending U+FE0F makes Discord
         // reject the whole message with COMPONENT_INVALID_EMOJI.
         .setEmoji('🔄')
+        // Discord has no tooltip; the label is the only accessible name a button can carry.
+        .setLabel('Refresh')
         .setStyle(ButtonStyle.Secondary)];
 
     if (pageCount > 1) {

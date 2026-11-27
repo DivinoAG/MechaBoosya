@@ -49,9 +49,12 @@ test('single page shows only the refresh button and says page 1/1', () => {
 
     // Discord rejects a variation selector on an emoji that already has emoji presentation,
     // and the rejection kills the whole message, so the emoji must stay one codepoint.
-    const emoji = message.components[0].components[0].data.emoji.name;
+    const button = message.components[0].components[0];
+    const emoji = button.data.emoji.name;
     assert.strictEqual([...emoji].length, 1, `expected one codepoint, got ${[...emoji].map(c => c.codePointAt(0).toString(16)).join(' ')}`);
     assert.strictEqual(emoji, '🔄');
+    // An emoji-only button has no accessible name; the visible label carries the meaning.
+    assert.strictEqual(button.data.label, 'Refresh');
     assert.strictEqual(message.embeds[0].data.footer.text, '3 birthday(s) registered · Page 1/1');
 });
 
