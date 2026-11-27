@@ -76,6 +76,22 @@ test('/birthday list renders the registry, and says so when it is empty', async 
     assert.ok(payload.files, 'and carries the image on a fresh post');
 });
 
+test('a registration refreshes stats.json so the count is readable from outside', async () => {
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const path = require('node:path');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mecha-cmd-stats-'));
+    process.env.EXPORT_DIR = dir;
+
+    const guildId = nextGuild();
+    const i = interaction({ sub: 'register', guildId, values: { day: 4, month: 5 } });
+    await birthday.execute(i);
+
+    const stats = JSON.parse(fs.readFileSync(path.join(dir, 'stats.json'), 'utf8'));
+    assert.strictEqual(stats.birthdays, 1);
+    assert.strictEqual(stats.guildId, guildId);
+});
+
 test('/birthday test reports success after posting', async () => {
     const guildId = nextGuild();
     store.setSetting(guildId, 'announcement_channel', 'c1');

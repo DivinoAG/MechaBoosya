@@ -5,6 +5,7 @@ const path = require('node:path');
 const { DEFAULT_TIMEZONE, zonedParts, dateKey, announcementMessage, isAnnounceWindowOpen, dueBirthdays, isLastDayOfMonth, nextMonth, monthlyAction, monthlyMessage, MONTHS } = require('./birthday');
 const { pruneExports } = require('./exports');
 const { notify } = require('./guild-log');
+const { writeStats } = require('./stats');
 
 // Posts today's birthdays once per person (unique row = idempotent) and keeps a daily DB snapshot.
 // Local time is what counts: a boot at 14:00 still announces, hence same-day catch-up for free.
@@ -137,8 +138,16 @@ function startBirthdayScheduler(client, {
         }
     }
 
+    let statsWritten = false;
+
     async function tick() {
         const settings = store.allSettings(guildId);
+
+        // A baseline after every restart: the count is readable from outside the container.
+        if (!statsWritten) {
+            statsWritten = true;
+            writeStats(store, guildId);
+        }
         const timeZone = settings.timezone || DEFAULT_TIMEZONE;
         const parts = zonedParts(now(), timeZone);
 
@@ -173,6 +182,7 @@ function startBirthdayScheduler(client, {
                     ...announcementMessage(person.user_id),
                 });
                 store.recordAnnouncement(guildId, person.user_id, key);
+                writeStats(store, guildId);
                 console.log(`[birthday] announced ${person.user_id} for ${key}`);
                 await notify(client, store, guildId, `🎂 Announced birthday for <@${person.user_id}> (${key})`);
             } catch (error) {

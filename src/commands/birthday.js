@@ -3,6 +3,7 @@
 const { MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
 const { getStore } = require('../utils/birthday-store');
 const { notify } = require('../utils/guild-log');
+const { writeStats } = require('../utils/stats');
 const {
     isValidDate, formatBirthday, announcementMessage, birthdayListMessage,
 } = require('../utils/birthday');
@@ -114,6 +115,7 @@ module.exports = {
             // The audit trail is best-effort and must never delay the answer: at 3.8 s the
             // interaction expired and the user saw nothing.
             if (removed) notify(interaction.client, store, guildId, `🗑️ ${user.tag} — birthday removed by ${interaction.user.tag}`).catch(() => {});
+            if (removed) writeStats(store, guildId);
             return;
         }
 
@@ -151,5 +153,6 @@ module.exports = {
             interaction.client, store, guildId,
             `📝 ${user.tag} — birthday ${existing ? 'updated' : 'registered'} to ${formatted} by ${interaction.user.tag}`
         ).catch(() => {});
+        writeStats(store, guildId);
     },
 };
