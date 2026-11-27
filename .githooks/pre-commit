@@ -1,8 +1,15 @@
 #!/bin/sh
-# Blocks a commit while the suite is red. Installed via `core.hooksPath` (see package.json
-# "prepare"); bypass with `git commit --no-verify` only when you know why the gate is wrong —
-# the deploy path applies its own syntax gate, so a red suite can still reach the bot.
+# Blocks a commit while the code is lint-clean, type-clean or the suite is green.
+# Installed via `core.hooksPath` (see package.json "prepare"); bypass with
+# `git commit --no-verify` only when you know why the gate is wrong — the deploy path
+# applies its own syntax gate but never runs the suite or the checker.
 set -e
+
+echo "[pre-commit] biome lint"
+npx --no-install biome lint src
+
+echo "[pre-commit] tsc --noEmit (checkJs)"
+npx --no-install tsc --noEmit
 
 echo "[pre-commit] node --check"
 find src -name '*.js' -exec node --check {} \;

@@ -56,7 +56,7 @@ function writeLine(line, name = 'bot') {
         fs.mkdirSync(logDir(), { recursive: true });
         const file = logFile(name);
         rotateIfNeeded(file);
-        fs.appendFileSync(file, line + '\n');
+        fs.appendFileSync(file, `${line}\n`);
     } catch {
         // disk problem: console output still exists
     }

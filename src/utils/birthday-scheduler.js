@@ -16,7 +16,9 @@ function startBirthdayScheduler(client, {
     runOnStart = true,
 }) {
     let busy = false;
+    /** @type {string | null} */
     let lastSnapshot = null;
+    /** @type {string | null} */
     let lastRoleSync = null;
 
     // One pinned message per guild: posted on the last day of the month for the month ahead,

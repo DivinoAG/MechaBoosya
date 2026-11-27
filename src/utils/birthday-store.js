@@ -142,7 +142,9 @@ function openStore(file = process.env.DB_PATH || '/data/db/mecha-boosya.sqlite')
     };
 }
 
+/** @type {ReturnType<typeof openStore> | null} */
 let singleton = null;
+/** @returns {ReturnType<typeof openStore>} a process-wide singleton */
 function getStore() {
     if (!singleton) singleton = openStore();
     return singleton;

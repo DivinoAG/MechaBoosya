@@ -26,12 +26,15 @@ const LOCK_STALE_MS = 180_000;
 
 const DEPS_STAMP = path.join(RUN_DIR, 'deps.sha');
 
+/** @type {import('node:child_process').ChildProcess | null} */
 let child = null;
 let childStartedAt = 0;
+/** @type {string | null} */
 let lastRestartAt = null;
 let crashCount = 0;
 let stopping = false;
 let heartbeatSeen = false;
+/** @type {number | null} */
 let deployLock = null;
 
 fs.mkdirSync(RUN_DIR, { recursive: true });
@@ -64,6 +67,7 @@ function startChild() {
   });
 }
 
+/** @returns {Promise<void>} */
 function stopChild(drain) {
   return new Promise(resolve => {
     if (!child) return resolve();
@@ -124,6 +128,7 @@ function syntaxCheck() {
 }
 
 async function deploy() {
+  /** @type {string | null} */
   let prevCommit = null;
   let npmCiRan = false;
 

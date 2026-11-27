@@ -152,7 +152,7 @@ test('list buttons are routed to the pager, and a pager failure is contained', a
         commands: new Map(),
         store: {},
         log: fakeLog(),
-        listButton: async (interaction, store) => { seen.push(interaction.customId); throw new Error('page gone'); },
+        listButton: async (interaction, _store) => { seen.push(interaction.customId); throw new Error('page gone'); },
     });
 
     const button = {

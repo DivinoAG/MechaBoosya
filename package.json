@@ -7,7 +7,9 @@
     "start": "node src/supervisor.js",
     "dev": "node src/index.js",
     "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=78 --test-coverage-functions=80",
+    "lint": "biome lint src",
+    "typecheck": "tsc --noEmit",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "keywords": [],
@@ -20,5 +22,10 @@
   "dependencies": {
     "discord.js": "^14.21.0",
     "dotenv": "^17.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.9",
+    "@types/node": "^26.6.11",
+    "typescript": "^7.0.2"
   }
 }

@@ -21,7 +21,8 @@ async function fetchForumThreads(channel) {
     console.log(`Found ${activeThreads.length} active threads.`);
 
     // Fetch all archived threads with pagination
-    let allArchivedThreads = [];
+    const allArchivedThreads = [];
+    /** @type {{ id: string } | null} */
     let lastThread = null;
     let hasMore = true;
 

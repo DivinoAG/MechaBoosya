@@ -12,7 +12,8 @@ const { loadCommands, createDispatcher } = require('./runtime');
 const HEARTBEAT_PATH = process.env.HEARTBEAT_PATH || '/data/run/child.heartbeat';
 const DRAIN_MS = Number(process.env.DRAIN_MS || 60_000);
 
-const client = new Client({
+// The client carries its own command collection; the cast teaches the type checker about it.
+const client = /** @type {import('discord.js').Client & { commands: import('discord.js').Collection<string, any> }} */ (new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -21,7 +22,7 @@ const client = new Client({
         GatewayIntentBits.GuildPresences,
         GatewayIntentBits.GuildMembers,
     ],
-});
+}));
 
 client.on('error', error => console.error('[client] error:', error));
 client.on('warn', warning => console.warn('[client] warn:', warning));
@@ -38,11 +39,26 @@ const dispatcher = createDispatcher({ commands: client.commands, store: getStore
 const activeCommands = () => dispatcher.activeCount;
 
 client.once('clientReady', async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+    const botUser = client.user;
+    if (!botUser) {
+        console.error('clientReady fired without a user; cannot register commands');
+        return;
+    }
+    console.log(`Logged in as ${botUser.tag}!`);
 
-    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
-    const applicationId = process.env.DISCORD_CLIENT_ID || client.user.id;
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (!token) {
+        console.error('DISCORD_BOT_TOKEN is not set; commands cannot be registered');
+        return;
+    }
+
+    const rest = new REST({ version: '10' }).setToken(token);
+    const applicationId = process.env.DISCORD_CLIENT_ID || botUser.id;
     const guildId = process.env.DISCORD_GUILD_ID;
+    if (!guildId) {
+        console.error('DISCORD_GUILD_ID is not set; guild commands cannot be registered');
+        return;
+    }
 
     try {
         const body = [...client.commands.values()].map(c => c.data.toJSON());

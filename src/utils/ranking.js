@@ -139,6 +139,7 @@ async function runRanking(interaction, { force = false } = {}) {
 
     try {
         let threadData;
+        /** @type {{ payload: any, ageMs: number, file: string } | null} */
         let cached = null;
 
         if (!force) {
