@@ -76,11 +76,17 @@ module.exports = {
                 return interaction.reply({ content: 'No announcement channel configured. Use `/birthday-config announcement-channel`.', flags: MessageFlags.Ephemeral });
             }
             const pingRole = store.getSetting(guildId, 'ping_role');
-            await channel.send({
-                content: pingRole ? `Test announcement for <@&${pingRole}>` : undefined,
-                ...announcementMessage(interaction.user.id),
-            });
-            return interaction.reply({ content: `Test announcement posted in <#${channel.id}>.`, flags: MessageFlags.Ephemeral });
+            // Sending takes as long as Discord takes: acknowledge before, report after.
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            try {
+                await channel.send({
+                    content: pingRole ? `Test announcement for <@&${pingRole}>` : undefined,
+                    ...announcementMessage(interaction.user.id),
+                });
+            } catch (error) {
+                return interaction.editReply({ content: `Could not post in <#${channel.id}>: ${error.message}` });
+            }
+            return interaction.editReply({ content: `Test announcement posted in <#${channel.id}>.` });
         }
 
         if (sub === 'show') {
@@ -99,15 +105,16 @@ module.exports = {
                 return interaction.reply({ content: 'Manage Server permission required to remove someone else\'s birthday.', flags: MessageFlags.Ephemeral });
             }
             const removed = store.deleteBirthday(guildId, user.id);
-            if (removed) {
-                await notify(interaction.client, store, guildId, `🗑️ ${user.tag} — birthday removed by ${interaction.user.tag}`);
-            }
-            return interaction.reply({
+            await interaction.reply({
                 content: removed
                     ? (isSelf ? 'Your birthday was removed.' : `Removed the birthday of <@${user.id}>.`)
                     : (isSelf ? 'You had no birthday registered.' : `<@${user.id}> had no birthday registered.`),
                 flags: MessageFlags.Ephemeral,
             });
+            // The audit trail is best-effort and must never delay the answer: at 3.8 s the
+            // interaction expired and the user saw nothing.
+            if (removed) notify(interaction.client, store, guildId, `🗑️ ${user.tag} — birthday removed by ${interaction.user.tag}`).catch(() => {});
+            return;
         }
 
         // register / update
@@ -134,15 +141,15 @@ module.exports = {
         store.upsertBirthday({ guildId, userId: user.id, month, day, year });
 
         const formatted = formatBirthday({ month, day, year });
-        await notify(
-            interaction.client, store, guildId,
-            `📝 ${user.tag} — birthday ${existing ? 'updated' : 'registered'} to ${formatted} by ${interaction.user.tag}`
-        );
-        return interaction.reply({
+        await interaction.reply({
             content: isSelf
                 ? `Birthday saved: **${formatted}**.`
                 : `Saved <@${user.id}>'s birthday: **${formatted}**.`,
             flags: MessageFlags.Ephemeral,
         });
+        notify(
+            interaction.client, store, guildId,
+            `📝 ${user.tag} — birthday ${existing ? 'updated' : 'registered'} to ${formatted} by ${interaction.user.tag}`
+        ).catch(() => {});
     },
 };
