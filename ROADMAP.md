@@ -47,11 +47,14 @@ paths and the stale-heartbeat watchdog) and `help.js` branches at 55 %.
 
 ## B. Deploy safety
 
-- [ ] **B1. `/deploy` detects `src/supervisor.js`.** A push touching the supervisor takes effect
-      only after a container recreate; the response should say so (`warning` field + log line)
-      instead of reporting a plain success. Tests: changed / unchanged file sets.
-- [ ] **B2. Branch policy in practice.** Feature branches named `feat/…`, `fix/…`, `test/…`,
-      `docs/…`; merge locally when green; `main` stays deployable.
+- [x] **B1. `/deploy` detects `src/supervisor.js`.** The response now carries
+      `supervisorChanged` plus a `warning` naming the recreate requirement, and the line is logged.
+      Tests cover both a change and a change that misses it, and the same run added the
+      supervisor's untested branches: 404 route, 409 on a concurrent deploy, and the watchdog
+      restarting a child that stops writing its heartbeat (`WATCHDOG_INTERVAL_MS` is now an env
+      knob so the test does not wait 15 s).
+- [x] **B2. Branch policy in practice.** Branches `feat/…`, `fix/…`, `test/…`, `docs/…`, merged
+      locally only when lint, types, syntax and tests pass. Recorded in `TESTING.md`.
 
 ## C. Observability
 
