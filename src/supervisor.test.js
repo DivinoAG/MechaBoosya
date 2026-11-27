@@ -27,10 +27,12 @@ function git(cwd, ...args) {
 const STUB = `const fs = require('node:fs');
 const path = require('node:path');
 const beat = process.env.HEARTBEAT_PATH;
-setInterval(() => {
+function touch() {
     try { fs.mkdirSync(path.dirname(beat), { recursive: true }); const d = new Date(); fs.utimesSync(beat, d, d); }
     catch { try { fs.writeFileSync(beat, '1'); } catch {} }
-}, 1000);
+}
+touch();
+if (!process.env.STUB_HEARTBEAT_ONCE) setInterval(touch, 1000);
 console.log('stub running');
 process.on('SIGTERM', () => setTimeout(() => process.exit(0), 100));
 `;
@@ -78,7 +80,7 @@ async function waitFor(check, { timeoutMs = 20_000, everyMs = 200 } = {}) {
     throw new Error('timed out waiting for condition');
 }
 
-async function start({ repo, run, port }) {
+async function start({ repo, run, port, extraEnv = {} }) {
     const child = spawn(process.execPath, [SUPERVISOR], {
         cwd: repo,
         env: {
@@ -92,6 +94,7 @@ async function start({ repo, run, port }) {
             DRAIN_MS: '3000',
             HEARTBEAT_STALE_MS: '60000',
             LOG_DIR: run,
+            ...extraEnv,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -169,6 +172,125 @@ test('supervisor: a dead child is restarted and counted', { timeout: 60_000 }, a
 
         assert.strictEqual(recovered.childState, 'running');
         assert.ok(recovered.crashCount >= 1, 'the crash is counted');
+    } finally {
+        sup.child.kill('SIGTERM');
+        await new Promise(resolve => sup.child.once('exit', resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('a deploy that touches supervisor.js says the container must be recreated', { timeout: 90_000 }, async () => {
+    const setup = makeRepo();
+    const { root, repo, run } = setup;
+    const dev = makeDevClone(setup);
+    const port = 45_000 + Math.floor(Math.random() * 1_000);
+    const sup = await start({ repo, run, port });
+
+    try {
+        // A real change to the supervisor: the running process keeps the old code.
+        fs.writeFileSync(path.join(dev, 'src', 'supervisor.js'), '// a deployed change to the supervisor\n');
+        git(dev, 'add', '-A');
+        git(dev, 'commit', '-q', '-m', 'touch the supervisor');
+        git(dev, 'push', '-q', 'origin', 'main');
+
+        const result = await fetch(`${sup.base}/deploy`, {
+            method: 'POST', headers: { Authorization: `Bearer ${SECRET}` },
+        }).then(r => r.json());
+
+        assert.strictEqual(result.ok, true, 'the deploy itself succeeds');
+        assert.strictEqual(result.supervisorChanged, true);
+        assert.match(result.warning, /recreate/i, 'the caller is told the new code is not running yet');
+    } finally {
+        sup.child.kill('SIGTERM');
+        await new Promise(resolve => sup.child.once('exit', resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('a deploy that leaves the supervisor alone carries no warning', { timeout: 90_000 }, async () => {
+    const setup = makeRepo();
+    const { root, repo, run } = setup;
+    const dev = makeDevClone(setup);
+    const port = 45_500 + Math.floor(Math.random() * 1_000);
+    const sup = await start({ repo, run, port });
+
+    try {
+        fs.writeFileSync(path.join(dev, 'README.md'), 'docs only\n');
+        git(dev, 'add', '-A');
+        git(dev, 'commit', '-q', '-m', 'docs');
+        git(dev, 'push', '-q', 'origin', 'main');
+
+        const result = await fetch(`${sup.base}/deploy`, {
+            method: 'POST', headers: { Authorization: `Bearer ${SECRET}` },
+        }).then(r => r.json());
+
+        assert.strictEqual(result.ok, true);
+        assert.strictEqual(result.supervisorChanged, false);
+        assert.strictEqual(result.warning, undefined);
+    } finally {
+        sup.child.kill('SIGTERM');
+        await new Promise(resolve => sup.child.once('exit', resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('unknown routes answer 404', { timeout: 30_000 }, async () => {
+    const { root, repo, run } = makeRepo();
+    const port = 46_000 + Math.floor(Math.random() * 1_000);
+    const sup = await start({ repo, run, port });
+
+    try {
+        const res = await fetch(`${sup.base}/nope`);
+        assert.strictEqual(res.status, 404);
+    } finally {
+        sup.child.kill('SIGTERM');
+        await new Promise(resolve => sup.child.once('exit', resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('a second deploy while one is running is refused with 409', { timeout: 90_000 }, async () => {
+    const setup = makeRepo();
+    const { root, repo, run } = setup;
+    const port = 46_500 + Math.floor(Math.random() * 1_000);
+    const sup = await start({ repo, run, port });
+
+    try {
+        const deploy = () => fetch(`${sup.base}/deploy`, {
+            method: 'POST', headers: { Authorization: `Bearer ${SECRET}` },
+        }).then(r => r.status);
+
+        const statuses = await Promise.all([deploy(), deploy()]);
+        assert.deepStrictEqual(statuses.sort(), [200, 409], `got ${statuses.join(',')}`);
+    } finally {
+        sup.child.kill('SIGTERM');
+        await new Promise(resolve => sup.child.once('exit', resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('a child that stops touching its heartbeat is restarted by the watchdog', { timeout: 60_000 }, async () => {
+    const { root, repo, run } = makeRepo();
+    const port = 47_000 + Math.floor(Math.random() * 1_000);
+    const sup = await start({
+        repo, run, port,
+        extraEnv: {
+            WATCHDOG_INTERVAL_MS: '100',
+            HEARTBEAT_STALE_MS: '300',
+            RESTART_DELAY_MS: '200',
+            STUB_HEARTBEAT_ONCE: '1',
+        },
+    });
+
+    try {
+        // The watchdog kills a silent child; the count is what proves it ran, since the pid is
+        // null during the restart delay and a fresh one appears a moment later.
+        const restarted = await waitFor(async () => {
+            const now = await sup.health();
+            return now.crashCount >= 1 ? now : null;
+        }, { timeoutMs: 20_000 });
+
+        assert.ok(restarted.crashCount >= 1, 'the watchdog restart is counted');
     } finally {
         sup.child.kill('SIGTERM');
         await new Promise(resolve => sup.child.once('exit', resolve));

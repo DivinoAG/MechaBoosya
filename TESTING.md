@@ -71,6 +71,9 @@ guild.
   unverified, which is why the GitHub Actions workflow runs the same four checks on every push.
 - `npm run test:coverage` enforces floors (80 lines / 78 branches / 80 functions). Raising the
   floors is the point of measuring; lowering one needs a reason in the commit.
+- `src/supervisor.js` is the one file whose deploy needs a container recreate: the running
+  supervisor executes the code it started with. `/deploy` reports `supervisorChanged` and a
+  warning when a push touches it, so a green deploy is not mistaken for applied code.
 - `tsc` checks `src/**/*.js` and **excludes** `*.test.js`: the stubs fake Discord objects and
   would need casts to type-check, which buys nothing. Test correctness is the suite's job.
 

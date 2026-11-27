@@ -23,6 +23,7 @@ const HEARTBEAT_STALE_MS = Number(process.env.HEARTBEAT_STALE_MS || 90_000);
 const DRAIN_MS = Number(process.env.DRAIN_MS || 60_000);
 const RESTART_DELAY_MS = Number(process.env.RESTART_DELAY_MS || 3_000);
 const LOCK_STALE_MS = 180_000;
+const WATCHDOG_INTERVAL_MS = Number(process.env.WATCHDOG_INTERVAL_MS || 30_000);
 
 const DEPS_STAMP = path.join(RUN_DIR, 'deps.sha');
 
@@ -109,6 +110,16 @@ function installDeps({ force }) {
   return true;
 }
 
+// Files this deploy changed. A supervisor change cannot take effect until the container is
+// recreated: the running process keeps executing the old copy.
+function changedFiles(fromCommit) {
+  try {
+    return git('diff', '--name-only', fromCommit, 'HEAD').split('\n').filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 function syntaxCheck() {
   const files = [];
   (function walk(dir) {
@@ -139,9 +150,16 @@ async function deploy() {
     git('reset', '--hard', DEPLOY_BRANCH);
     npmCiRan = installDeps({ force: false });
     const checked = syntaxCheck();
+    const supervisorChanged = changedFiles(prevCommit).includes('src/supervisor.js');
     startChild();
     console.log(`[supervisor] deployed ${headCommit()} (prev ${prevCommit.slice(0, 7)}, ${checked} files checked)`);
-    return { ok: true, commit: headCommit(), prevCommit: prevCommit.slice(0, 7), npmCiRan };
+
+    if (supervisorChanged) {
+      const warning = 'src/supervisor.js changed: the running supervisor keeps the old code until the container is recreated';
+      console.warn(`[supervisor] ${warning}`);
+      return { ok: true, commit: headCommit(), prevCommit: prevCommit.slice(0, 7), npmCiRan, supervisorChanged, warning };
+    }
+    return { ok: true, commit: headCommit(), prevCommit: prevCommit.slice(0, 7), npmCiRan, supervisorChanged };
   } catch (err) {
     const short = prevCommit ? prevCommit.slice(0, 7) : 'unknown';
     console.error(`[supervisor] deploy failed: ${err.message} — rolling back to ${short}`);
@@ -220,7 +238,7 @@ setInterval(() => {
   } catch {
     // missing heartbeat: nothing to judge yet
   }
-}, 15_000).unref();
+}, WATCHDOG_INTERVAL_MS).unref();
 
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, async () => {
