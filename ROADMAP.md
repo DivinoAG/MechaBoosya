@@ -42,13 +42,22 @@ one branch per item, merge to `main` only when the suite, lint and types are gre
 
 ## C. Observability
 
-- [ ] **C1. Uptime Kuma** (user-side): container on `gateway-net`, keyword monitor on
-      `"childState":"running"` at `http://mecha-boosya:3000/health`, HTTP monitor on the Hermes
-      dashboard, one **external** monitor for the Mac itself. Send a test notification before
-      trusting the channel. https://github.com/louislam/uptime-kuma
-- [ ] **C2. Agent-side poll** (only if unattended reaction is wanted): Hermes cron every 30 min
-      hitting the same endpoint, opening a task on failure. Cannot be replaced by Kuma alerts —
-      I have no inbound webhook.
+**Constraint that shapes this section:** a monitor hosted on the Mac cannot report the Mac being
+down, and I run on that Mac, so no alert can reach *me* while it is off. Split the problem in two:
+
+- **Recoverable failures** (container up, bot child dead; bad deploy; log channel broken) — I can
+  detect and repair these, and a local check is enough.
+- **Unrecoverable failures** (Mac off, Docker down, disk full) — only an external service can
+  report them, and the report has to go to the human, not to me.
+
+- [ ] **C1. External dead-man's switch** (detects the Mac itself dying). Options, pick one:
+      Healthchecks.io (hosted push, free for 20 checks, alerts by email/ntfy/webhook —
+      https://healthchecks.io/), Gatus (one container, YAML in the repo, rich conditions), Uptime
+      Kuma (UI-driven; must live on another machine to be meaningful). Any of them must be proved
+      with a test notification before it is trusted.
+- [ ] **C2. Local repair loop**: Hermes cron every 15 min — if `/health` is not
+      `childState: running`, `POST /deploy` to restart the child and note what happened. This is
+      the half that makes me the responder; it cannot cover the Mac being off.
 - [ ] **C3. Surface delivery failures.** `notify()` swallows its own errors by design; add a
       counter to `/health` so a broken log channel is visible without reading logs.
 
