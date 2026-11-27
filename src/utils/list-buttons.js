@@ -24,7 +24,13 @@ async function handleListButton(interaction, store) {
     }
 
     // Reuse the attachment already on the message rather than uploading it on every click.
-    const imageUrl = interaction.message?.attachments?.first?.()?.url ?? null;
+    // A component interaction can carry a partial message, so fetch it before giving up.
+    let imageUrl = interaction.message?.attachments?.first?.()?.url ?? null;
+    if (!imageUrl && interaction.message?.fetch) {
+        const full = await interaction.message.fetch().catch(() => null);
+        imageUrl = full?.attachments?.first?.()?.url ?? null;
+    }
+    console.log(`[list] ${imageUrl ? 'reusing' : 'uploading'} the birthday image (guild ${interaction.guildId})`);
 
     return interaction.editReply(birthdayListMessage(interaction.guild.name, entries, { page, imageUrl }));
 }

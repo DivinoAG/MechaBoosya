@@ -147,3 +147,23 @@ test('a list that has no image yet still uploads one', async () => {
     assert.strictEqual(payload.files[0].name, 'birthday.png');
     assert.strictEqual(payload.embeds[0].data.thumbnail.url, 'attachment://birthday.png');
 });
+
+test('a message whose attachments are not cached is fetched instead of re-uploaded', async () => {
+    const interaction = fakeInteraction('blist:refresh:0', { entries: [{ userId: 'u1', month: 5, day: 4 }] });
+    let fetches = 0;
+
+    // Component interactions can carry a partial message: attachments come back empty.
+    interaction.message = {
+        attachments: { first: () => null },
+        fetch: async () => {
+            fetches += 1;
+            return { attachments: { first: () => ({ name: 'birthday.png', url: 'https://cdn.discordapp.com/attachments/9/9/birthday.png' }) } };
+        },
+    };
+
+    await handleListButton(interaction, interaction.store);
+
+    assert.strictEqual(fetches, 1, 'the message is fetched once');
+    assert.strictEqual(interaction.calls.update.files, undefined, 'no upload once the URL is known');
+    assert.strictEqual(interaction.calls.update.embeds[0].data.thumbnail.url, 'https://cdn.discordapp.com/attachments/9/9/birthday.png');
+});

@@ -179,7 +179,9 @@ function pageButtons(page, pageCount) {
     // Refresh is first: it is the only button present on every list, single page or not.
     const buttons = [new ButtonBuilder()
         .setCustomId(`blist:refresh:${page}`)
-        .setEmoji('🔄️')
+        // 🔄 is U+1F504 with emoji presentation already; appending U+FE0F makes Discord
+        // reject the whole message with COMPONENT_INVALID_EMOJI.
+        .setEmoji('🔄')
         .setStyle(ButtonStyle.Secondary)];
 
     if (pageCount > 1) {
