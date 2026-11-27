@@ -84,10 +84,13 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
 
 ## D. Data safety
 
-- [ ] **D1. Restore drill.** Load `raw/mecha-boosya/db/latest.sqlite` into a throwaway store and
-      assert the birthday count matches the live number. A backup never restored is a hypothesis.
-- [ ] **D2. Dependabot** for the dev dependencies (Biome, TypeScript, `@types/node`), weekly,
-      grouped into one PR.
+- [x] **D1. Restore drill.** `npm run drill` opens `raw/mecha-boosya/db/latest.sqlite` read-only and
+      fails when it cannot be read, holds no rows, holds *more* rows than the live `stats.json`, or
+      is older than 36 h. Strict equality against a live count was the first design and was wrong:
+      the backup is a point-in-time copy, so a lag is expected and only staleness or loss is a fault.
+      Live run: 30 birthdays in the backup, 45 live, 15 registered since the snapshot — OK.
+- [x] **D2. Dependabot.** `.github/dependabot.yml`: npm dev dependencies weekly, grouped into one
+      PR for minor and patch updates; GitHub Actions monthly.
 - [x] **D3. `stats.json` next to the exports.** Written on boot and after every
       registration/removal or announcement, carrying `generatedAt`, `guildId`, `birthdays` and
       `announcements`. The live DB sits inside the container, so without this any count quoted

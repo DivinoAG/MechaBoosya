@@ -10,7 +10,8 @@
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=94 --test-coverage-branches=83 --test-coverage-functions=82",
     "lint": "biome lint src",
     "typecheck": "tsc --noEmit",
-    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+    "drill": "node src/tools/restore-drill.js"
   },
   "keywords": [],
   "author": "",
