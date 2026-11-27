@@ -56,3 +56,16 @@ npm test -- src/utils/birthday-scheduler.test.js   # one file
 Tests use no framework, no network, and no Discord connection. Time, filesystem roots and the
 Discord client are injected, so a test can drive a real code path with a fake clock or a fake
 guild.
+
+## The commit gate
+
+`.githooks/pre-commit` runs `node --check` over `src/` and then the full suite, and refuses the
+commit if either fails. `core.hooksPath` is set by the `prepare` script, so a fresh clone gets it
+on `npm install`; without npm, run `git config core.hooksPath .githooks` once.
+
+- `git commit --no-verify` exists and is a deliberate exception, not a convenience. The deploy
+  path applies its own syntax gate but does not run the suite, so a red commit can still reach
+  the bot — say in the commit message why the gate was bypassed.
+- The gate covers commits, not pushes. Anyone pushing from another clone without the hook runs
+  unverified, which is why `TESTING.md` is the rule and the hook is only the enforcement of it.
+

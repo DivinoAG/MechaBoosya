@@ -1,0 +1,15 @@
+#!/bin/sh
+# Blocks a commit while the suite is red. Installed via `core.hooksPath` (see package.json
+# "prepare"); bypass with `git commit --no-verify` only when you know why the gate is wrong —
+# the deploy path applies its own syntax gate, so a red suite can still reach the bot.
+set -e
+
+echo "[pre-commit] node --check"
+find src -name '*.js' -exec node --check {} \;
+
+echo "[pre-commit] npm test"
+if ! npm test --silent; then
+    echo
+    echo "[pre-commit] blocked: the test suite is failing. Fix it, or re-run with --no-verify." >&2
+    exit 1
+fi
