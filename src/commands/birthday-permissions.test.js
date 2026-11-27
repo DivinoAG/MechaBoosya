@@ -1,5 +1,7 @@
 'use strict';
 
+require('../test-support/quiet-console').quietConsole();
+
 // Permission boundaries and option handling for the birthday commands.
 // These are security-relevant: a regression here lets a member edit other people's data
 // or change server configuration.
