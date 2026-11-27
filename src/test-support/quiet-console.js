@@ -4,7 +4,7 @@
 // "[list] page 1/1 rebuilt", "[birthday] announced …" and similar. Filter exactly those
 // prefixes and let anything unexpected through — a swallowed error would hide a failure.
 
-const CHATTER = /^\[(list|birthday|monthly|supervisor|cmd|log|rest|client)\]|^(Serving cached|Fetching forum|Found \d+ threads|Fetched a batch|Processing thread|Ranking export|Pruned |Failed to write ranking export)/;
+const CHATTER = /^\[(list|birthday|monthly|supervisor|cmd|log|rest|client)\]|^(Serving cached|Fetching forum|Found \d+ threads|Fetched a batch|Processing thread|Ranking export|Pruned |Failed to write ranking export|Error processing top-posts)/;
 
 function quietConsole() {
     for (const method of ['log', 'warn', 'error']) {
