@@ -8,7 +8,7 @@ Runs as a Node process inside its own container, supervised by `src/supervisor.j
 
 | Command | Who can run it | What it does |
 |---|---|---|
-| `/forum-rank` | Manage Channels | Ranks threads in a forum channel by the count of the channel's default reaction on the opening post. Served from the newest export when it is younger than `CACHE_TTL_HOURS`. |
+| `/forum-rank` | Everyone | Ranks threads in a forum channel by the count of the channel's default reaction on the opening post. Served from the newest export when it is younger than `CACHE_TTL_HOURS`. |
 | `/forum-rank-force` | Manage Server (hidden from others) | Same report, always rescans every thread. |
 | `/birthday register` | Everyone (self) | `day`, `month`, optional `year`, optional `user` for others (managers only). |
 | `/birthday update` | Everyone (self) | Same options, requires an existing entry. |
@@ -145,7 +145,7 @@ The pre-commit hook runs lint → types → syntax → tests and refuses the com
 
 ## Required Discord permissions
 
-View Channels, Send Messages, Read Message History, and Manage Roles when a birthday role is configured (the bot's role must be above it). Manage Channels gates `/forum-rank`; Manage Server gates the config commands and `/forum-rank-force`. Channels chosen through `/birthday-config` are checked for View Channel and Send Messages when they are saved.
+View Channels, Send Messages, Read Message History, and Manage Roles when a birthday role is configured (the bot's role must be above it). `/forum-rank` is open to every member; Manage Server gates the config commands and `/forum-rank-force`, which Discord hides from members through the registration itself. Channels chosen through `/birthday-config` are checked for View Channel and Send Messages when they are saved.
 
 ## Layout
 

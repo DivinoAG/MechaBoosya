@@ -128,6 +128,10 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       29 February, because that is the one message about *this year's* celebration. It fires only
       when the celebration day is not 29 February — the first version added the note on the real
       day in a leap year too, which the scheduler test caught.
+- [x] **E7. `/forum-rank` is for everyone.** It was gated on Manage Channels in code while Discord
+      showed it to everyone, so a member could see the command in the picker and be refused when
+      running it. The gate goes; only `/forum-rank-force` stays admin. `/help` follows, and a test
+      asserts the registration itself declares no permissions for the public command.
 - [x] **E6. `/help` as a real manual.** Static manifest of every command with its arguments, rendered
       in sections (birthdays, rankings, configuration, general) with the same layout as the reference
       bot: inline-code command, bracketed optional arguments, em dash, one line each. Entries are

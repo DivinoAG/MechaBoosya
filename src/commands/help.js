@@ -8,7 +8,6 @@ const { MessageFlags, PermissionsBitField, SlashCommandBuilder } = require('disc
 const { ACCENT } = require('../utils/theme');
 
 const ANYONE = null;
-const MANAGE_CHANNELS = PermissionsBitField.Flags.ManageChannels;
 const MANAGE_SERVER = PermissionsBitField.Flags.ManageGuild;
 
 const SECTIONS = [
@@ -25,7 +24,7 @@ const SECTIONS = [
     {
         header: '📊 **Forum rankings**',
         entries: [
-            { command: '/forum-rank', args: ['channel', '[number_of_posts]', '[direct_message]'], text: 'Top posts by reaction count — from the archive when it is recent.', need: MANAGE_CHANNELS },
+            { command: '/forum-rank', args: ['channel', '[number_of_posts]', '[direct_message]'], text: 'Top posts by reaction count — from the archive when it is recent.', need: ANYONE },
             { command: '/forum-rank-force', args: ['channel', '[number_of_posts]', '[direct_message]'], text: 'The same report, always rescanning every post.', need: MANAGE_SERVER },
         ],
     },

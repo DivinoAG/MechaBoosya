@@ -128,13 +128,6 @@ const DISCORD_API = { fetchForumThreads, fetchInitialMessage };
 
 // `api` is injectable so tests can drive the whole flow without a Discord connection.
 async function runRanking(interaction, { force = false, api = DISCORD_API } = {}) {
-    if (!interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
-        return interaction.reply({
-            content: 'You do not have permission to use this command.',
-            flags: MessageFlags.Ephemeral,
-        });
-    }
-
     const channel = interaction.options.getChannel('channel');
     const numberOfPosts = interaction.options.getInteger('number_of_posts');
     const directMessage = interaction.options.getBoolean('direct_message');
