@@ -25,6 +25,10 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 | `utils/ranking.js` | yes | cache decision, export write, chunking, DM path, ordering, refusals, progress wiring |
 | `utils/scan-coordinator.js` | yes | one scan per channel, shared progress, settle wake-up, failure cleanup |
 | `utils/exports.js` | yes | envelope, atomic write, freshness lookup, retention |
+| `utils/report-generator.js` | yes | numbering offsets, votes and tags, empty list |
+| `utils/config.js` | yes | reports the values the modules actually use |
+| `utils/stats.js` | yes | counts written where the exports live, unusable directory survives |
+| `utils/backup.js` | yes | readable snapshot, missing file, non-database, missing tables |
 | `utils/logger.js` | yes | format, rotation, unwritable dir |
 | `utils/list-buttons.js` | yes | paging by custom id, empty registry |
 | `utils/message-formatter.js` | yes | accent colour, footer, truncation |
@@ -38,13 +42,11 @@ inconvenience. Either the requirement changed (edit the test, say so) or the cod
 
 ## Before touching these, add the test
 
-Everything on the critical paths now has a test. Two behaviours remain uncovered by choice, and
-a change there needs one added first:
+Everything on the critical paths now has a test. One behaviour remains uncovered by choice, and a
+change there needs one added first:
 
-1. `src/index.js` — the discord.js wiring: login, `rest.put` registration, the SIGTERM drain loop.
-   Provable only against a real gateway or a fake Client; the counter it waits on is tested.
-2. `utils/ranking.js` — the cached scan flow (freshness window, `force`, progress edits). The
-   permission gate and the formatter are covered; the orchestration is not.
+`src/index.js` — the discord.js wiring: login, `rest.put` registration, the SIGTERM drain loop.
+Provable only against a real gateway or a fake Client; the counter it waits on is tested.
 
 ## Running them
 
@@ -69,7 +71,7 @@ guild.
   can still reach the bot — say in the commit message why the gate was bypassed.
 - The gate covers commits, not pushes. Anyone pushing from another clone without the hook runs
   unverified, which is why the GitHub Actions workflow runs the same four checks on every push.
-- `npm run test:coverage` enforces floors (80 lines / 78 branches / 80 functions). Raising the
+- `npm run test:coverage` enforces floors (94 lines / 83 branches / 82 functions). Raising the
   floors is the point of measuring; lowering one needs a reason in the commit.
 - `src/supervisor.js` is the one file whose deploy needs a container recreate: the running
   supervisor executes the code it started with. `/deploy` reports `supervisorChanged` and a

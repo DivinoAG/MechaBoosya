@@ -12,9 +12,9 @@ Living checklist of agreed work. Rules for whoever executes:
 ## Status
 
 - Live: ranking + birthday tracker in `mecha-boosya` container, deployed from `main` via `POST /deploy`.
-- Gates: Biome, `tsc --checkJs`, `node --check`, 114 tests, coverage floors (80/78/80), pre-commit + CI.
+- Gates: Biome, `tsc --checkJs`, `node --check`, 196 tests, coverage floors (94/83/82), pre-commit + CI.
 - Data: SQLite in a Docker volume; daily snapshot pushed to the wiki repo as
-  `raw/mecha-boosya/db/latest.sqlite`; ranking exports ingested every 15 minutes.
+  `raw/mecha-boosya/db/latest.sqlite`; ranking exports ingested every 6 hours.
 
 ## A. Test coverage hardening (do first)
 

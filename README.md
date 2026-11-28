@@ -47,7 +47,7 @@ Interactions are acknowledged before any work starts (`deferReply`, or `deferUpd
 
 **Monthly digest.** On the last day of a month the bot posts the upcoming month's list, pins it, and then edits that same message once a day while the month runs, so late registrations appear without a new post. That daily edit happens at most once per day even across deploys, because the date is stored rather than held in memory. On rollover the previous message is unpinned and the next one is posted. **Changing the target channel deletes the old post and posts a new one there**, and switching the feature to `off` removes the pinned post. One message per guild, tracked in `monthly_posts`; needs **Manage Messages** to pin.
 
-**Archive.** A Hermes cron job (`/opt/data/scripts/mecha-boosya-ingest.sh`, every 15 min) copies new ranking exports into `llm-wiki/raw/cosplay-wishlist/<yyyy>/<mm>/` and pushes the wiki repo when something changed; a daily job (03:00) also refreshes `llm-wiki/raw/mecha-boosya/db/latest.sqlite`. Both are silent unless they do something or the health check fails.
+**Archive.** A Hermes cron job (`/opt/data/scripts/mecha-boosya-ingest.sh`, every 6 h) copies new ranking exports into `llm-wiki/raw/cosplay-wishlist/<yyyy>/<mm>/` and pushes the wiki repo when something changed; a daily job (03:00) also refreshes `llm-wiki/raw/mecha-boosya/db/latest.sqlite`. Both are silent unless they do something or the health check fails. The 6-hour cadence is not a freshness limit: a ranking export only changes when someone runs `/forum-rank`.
 
 ## Configuration
 
@@ -162,9 +162,13 @@ src/
     ranking.js          scan, cache, progress, report, abort threshold
     scan-coordinator.js one scan per channel, shared progress
     exports.js          atomic exports, freshness lookup, retention
+    report-generator.js the ranking text for one chunk of entries
+    discord-api.js      forum thread pagination (active + archived)
     birthday.js         date maths, embeds, pagination, the 29 February rule
     birthday-store.js   SQLite access
     birthday-scheduler.js  announcements, role sync, monthly post, snapshots
+    list-buttons.js     paging and refresh button routing
+    message-formatter.js accent colour, footer, truncation
     guild-log.js        log-channel notifications
     stats.js            the readable status file
     config.js           the effective configuration it reports
