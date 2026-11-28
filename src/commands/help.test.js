@@ -44,20 +44,20 @@ test('a member sees the member commands and nothing else', async () => {
     await help.execute(i);
     const shown = text(i);
 
-    for (const command of ['/birthday register', '/birthday update', '/birthday remove', '/birthday show', '/birthday list', '/help']) {
+    for (const command of ['/birthday register', '/birthday update', '/birthday remove', '/birthday show', '/birthday list', '/forum-rank', '/help']) {
         assert.ok(shown.includes(command), `${command} should be listed`);
     }
-    for (const hidden of ['/birthday-config', '/forum-rank', '/birthday test']) {
+    for (const hidden of ['/birthday-config', '/forum-rank-force', '/birthday test']) {
         assert.ok(!shown.includes(hidden), `${hidden} must not be listed`);
     }
 });
 
-test('Manage Channels reveals the ranking command but not the server-only ones', async () => {
+test('Manage Channels adds nothing: the ranking command is public', async () => {
     const i = interaction(CHANNELS);
     await help.execute(i);
     const shown = text(i);
 
-    assert.ok(shown.includes('/forum-rank`'), 'the ranking command is listed');
+    assert.ok(shown.includes('/forum-rank`'));
     assert.ok(!shown.includes('/forum-rank-force'), 'forcing a rescan needs Manage Server');
     assert.ok(!shown.includes('/birthday-config'), 'configuration is still hidden');
 });
@@ -72,11 +72,13 @@ test('Manage Server sees every command', async () => {
     }
 });
 
-test('each entry follows its own gate, not a blanket "is an admin"', async () => {
-    // Manage Server does not imply Manage Channels, and /forum-rank is gated on the latter.
+test('a manager sees the public command and the admin one', async () => {
     const i = interaction(SERVER);
     await help.execute(i);
-    assert.ok(!text(i).includes('/forum-rank`'), 'the ranking command needs Manage Channels');
+    const shown = text(i);
+
+    assert.ok(shown.includes('/forum-rank`'), 'public');
+    assert.ok(shown.includes('/forum-rank-force'), 'admin');
 });
 
 test('a missing permission set behaves like a plain member', async () => {

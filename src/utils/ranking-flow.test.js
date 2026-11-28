@@ -230,16 +230,15 @@ test('entries are ordered by reaction count, highest first', async () => {
     assert.ok(description.indexOf('post-3') < description.indexOf('post-1'), '4 votes before 1');
 });
 
-test('a member without Manage Channels is refused before anything else', async () => {
+test('a member without Manage Channels is served like anyone else', async () => {
     tempExports();
-    const api = fakeApi(posts([1]));
+    const api = fakeApi(posts([2, 1]));
     const i = interaction(forumChannel());
     i.memberPermissions = { has: () => false };
     await runRanking(i, { api });
 
-    assert.deepStrictEqual(i.order, ['reply']);
-    assert.match(i.sends[0][1].content, /permission/i);
-    assert.strictEqual(api.calls.forum, 0);
+    assert.strictEqual(api.calls.forum, 1, 'the scan runs for a plain member');
+    assert.ok(i.sends.some(([kind]) => kind === 'edit'), 'and the report is delivered');
 });
 
 test('a channel that is not a forum is refused', async () => {
