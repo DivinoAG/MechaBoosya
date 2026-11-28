@@ -34,6 +34,12 @@ function progressText(channelName, done, total, elapsedMs) {
     return `🔍 Scanning #${channelName} — ${done} / ${total} posts (${pct}%) · ${formatDuration(elapsedMs)}`;
 }
 
+// DONE and PLAYED mean the entry is no longer competing in the wishlist.
+const FINISHED_TAG = /^(done|played)$/i;
+function isFinished(thread) {
+    return (thread.tags ?? []).some(tag => FINISHED_TAG.test(tag));
+}
+
 // Who asked, with a name next to the id so a log line read from Dockge is legible.
 function requester(interaction) {
     return `user=${interaction.user?.id ?? 'unknown'}(${interaction.user?.username ?? 'unknown'})`;
@@ -55,6 +61,11 @@ function addRankingOptions(builder) {
         .addBooleanOption(option =>
             option.setName('direct_message')
                 .setDescription('Send the report as a direct message.')
+                .setRequired(false)
+        )
+        .addBooleanOption(option =>
+            option.setName('include_finished')
+                .setDescription('Include posts tagged DONE or PLAYED, which are hidden by default.')
                 .setRequired(false)
         );
 }
@@ -131,6 +142,7 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
     const channel = interaction.options.getChannel('channel');
     const numberOfPosts = interaction.options.getInteger('number_of_posts');
     const directMessage = interaction.options.getBoolean('direct_message');
+    const includeFinished = interaction.options.getBoolean('include_finished') ?? false;
 
     if (channel.type !== ChannelType.GuildForum) {
         return interaction.reply({
@@ -199,9 +211,13 @@ async function runRanking(interaction, { force = false, api = DISCORD_API } = {}
         }
 
         const sorted = [...threadData].sort((a, b) => b.reactionCount - a.reactionCount);
-        const finalThreadData = numberOfPosts ? sorted.slice(0, numberOfPosts) : sorted;
+        // Finished posts are still archived above; they just stop competing in the posted ranking.
+        const competing = includeFinished ? sorted : sorted.filter(thread => !isFinished(thread));
+        const hidden = sorted.length - competing.length;
+        const finalThreadData = numberOfPosts ? competing.slice(0, numberOfPosts) : competing;
         const footerParts = [];
-        if (cached) footerParts.push(`Cached results from ${formatAge(cached.ageMs)} ago`, `${threadData.length} posts`);
+        if (cached) footerParts.push(`Cached results from ${formatAge(cached.ageMs)} ago`, `${competing.length} posts`);
+        if (hidden > 0) footerParts.push(`${hidden} finished post${hidden === 1 ? '' : 's'} hidden`);
         if (failures > 0) footerParts.push(`${failures} post${failures === 1 ? '' : 's'} unreadable`);
         const footer = footerParts.length > 0 ? footerParts.join(' · ') : null;
 

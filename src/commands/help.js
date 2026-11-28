@@ -24,8 +24,8 @@ const SECTIONS = [
     {
         header: '📊 **Forum rankings**',
         entries: [
-            { command: '/forum-rank', args: ['channel', '[number_of_posts]', '[direct_message]'], text: 'Top posts by reaction count — from the archive when it is recent.', need: ANYONE },
-            { command: '/forum-rank-force', args: ['channel', '[number_of_posts]', '[direct_message]'], text: 'The same report, always rescanning every post.', need: MANAGE_SERVER },
+            { command: '/forum-rank', args: ['channel', '[number_of_posts]', '[direct_message]', '[include_finished]'], text: 'Top posts by reaction count — from the archive when it is recent.', need: ANYONE },
+            { command: '/forum-rank-force', args: ['channel', '[number_of_posts]', '[direct_message]', '[include_finished]'], text: 'The same report, always rescanning every post.', need: MANAGE_SERVER },
         ],
     },
     {

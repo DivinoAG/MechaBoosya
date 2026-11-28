@@ -59,7 +59,7 @@ function fakeApi(threads, { fail = false } = {}) {
     };
 }
 
-function interaction(channel, { limit = null, dm = false } = {}) {
+function interaction(channel, { limit = null, dm = false, finished = null } = {}) {
     const sends = [];
     const order = [];
     return {
@@ -73,7 +73,7 @@ function interaction(channel, { limit = null, dm = false } = {}) {
         options: {
             getChannel: () => channel,
             getInteger: () => limit,
-            getBoolean: () => dm,
+            getBoolean: name => (name === 'direct_message' ? dm : finished),
         },
         deferReply: async () => { order.push('defer'); },
         editReply: async payload => { order.push('edit'); sends.push(['edit', payload]); },
@@ -429,4 +429,120 @@ test('a second caller waiting on an aborted scan is told the same thing', async 
 
     assert.match(first.sends.at(-1)[1].content, /unreadable/i);
     assert.match(second.sends.at(-1)[1].content, /unreadable/i, 'the joiner is not left waiting');
+});
+
+// "Finished" means the post is no longer competing: tagged DONE or PLAYED in the forum.
+
+const FINISHED_TAGS = [{ id: 't-done', name: 'DONE' }, { id: 't-played', name: 'Played' }];
+
+function taggedForum() {
+    return [
+        { id: '1', name: 'competing-top', appliedTags: [], count: 30 },
+        { id: '2', name: 'done-post', appliedTags: ['t-done'], count: 99 },
+        { id: '3', name: 'played-post', appliedTags: ['t-played'], count: 80 },
+        { id: '4', name: 'competing-second', appliedTags: [], count: 10 },
+    ];
+}
+
+function report(i) {
+    return i.sends.find(([kind]) => kind === 'edit')[1].embeds[0].data;
+}
+
+test('finished posts are hidden from the report by default and still archived', async () => {
+    const dir = tempExports();
+    const api = fakeApi(taggedForum());
+    const i = interaction(forumChannel({ availableTags: FINISHED_TAGS }));
+    await runRanking(i, { api });
+
+    const description = report(i).description;
+    assert.match(description, /competing-top/);
+    assert.doesNotMatch(description, /done-post/, 'DONE is not competing');
+    assert.doesNotMatch(description, /played-post/, 'PLAYED is not competing');
+
+    const file = fs.readdirSync(dir).find(name => name.startsWith('ranking-'));
+    const archived = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    assert.strictEqual(archived.threads.length, 4, 'the wiki needs every post, including finished ones');
+});
+
+test('include_finished puts them back in the ranking', async () => {
+    tempExports();
+    const api = fakeApi(taggedForum());
+    const i = interaction(forumChannel({ availableTags: FINISHED_TAGS }), { finished: true });
+    await runRanking(i, { api });
+
+    const description = report(i).description;
+    assert.match(description, /done-post/);
+    assert.match(description, /played-post/);
+    assert.ok(description.indexOf('done-post') < description.indexOf('competing-top'), 'still ranked by votes');
+});
+
+test('only DONE and PLAYED count as finished, whatever the case', async () => {
+    tempExports();
+    const api = fakeApi([
+        { id: '1', name: 'lowercase', appliedTags: ['a'], count: 5 },
+        { id: '2', name: 'mixed', appliedTags: ['b'], count: 4 },
+        { id: '3', name: 'in-progress', appliedTags: ['c'], count: 3 },
+    ]);
+    const i = interaction(forumChannel({
+        availableTags: [{ id: 'a', name: 'done' }, { id: 'b', name: 'Played' }, { id: 'c', name: 'In Progress' }],
+    }));
+    await runRanking(i, { api });
+
+    const description = report(i).description;
+    assert.match(description, /in-progress/);
+    assert.doesNotMatch(description, /lowercase|mixed/);
+});
+
+test('the limit counts competing entries, not the hidden ones', async () => {
+    tempExports();
+    const api = fakeApi(taggedForum());
+    const i = interaction(forumChannel({ availableTags: FINISHED_TAGS }), { limit: 2 });
+    await runRanking(i, { api });
+
+    const description = report(i).description;
+    assert.match(description, /competing-top/);
+    assert.match(description, /competing-second/);
+    assert.doesNotMatch(description, /done-post/);
+});
+
+test('a cached export is filtered the same way, without a rescan', async () => {
+    const dir = tempExports();
+    const channel = forumChannel({ availableTags: FINISHED_TAGS });
+    writeRankingExport('f1', taggedForum().map(thread => ({
+        id: thread.id,
+        name: thread.name,
+        reactionCount: thread.count,
+        tags: thread.appliedTags.map(id => FINISHED_TAGS.find(tag => tag.id === id)?.name).filter(Boolean),
+    })), { channelName: 'posts', requestedBy: 'u1', limit: null, failures: 0 });
+
+    const api = fakeApi([]);
+    const i = interaction(channel);
+    await runRanking(i, { api });
+
+    assert.strictEqual(api.calls.forum, 0, 'served from the archive');
+    const description = report(i).description;
+    assert.match(description, /competing-top/);
+    assert.doesNotMatch(description, /done-post/);
+    assert.match(report(i).footer.text, /Cached results/);
+    assert.ok(fs.readdirSync(dir).length >= 1);
+});
+
+test('the footer says how many finished posts were hidden', async () => {
+    tempExports();
+    const api = fakeApi(taggedForum());
+    const i = interaction(forumChannel({ availableTags: FINISHED_TAGS }));
+    await runRanking(i, { api });
+
+    assert.match(report(i).footer.text, /2 finished posts hidden/);
+});
+
+test('both commands offer the option, off unless asked for', () => {
+    const forumRank = require('../commands/forum-rank');
+    const force = require('../commands/forum-rank-force');
+    for (const command of [forumRank, force]) {
+        const option = command.data.options.find(o => o.name === 'include_finished');
+        assert.ok(option, `${command.data.name} should offer include_finished`);
+        assert.strictEqual(option.required, false);
+        assert.strictEqual(option.description.length > 0, true);
+    }
 });

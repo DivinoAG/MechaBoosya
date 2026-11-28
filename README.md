@@ -25,13 +25,15 @@ Runs as a Node process inside its own container, supervised by `src/supervisor.j
 | `/birthday-config timezone` | Manage Server | IANA time zone deciding "today" (default `UTC`). |
 | `/help` | Everyone | Lists the commands the caller can use. |
 
-Ranking options: `channel` (required), `number_of_posts`, `direct_message`.
+Ranking options: `channel` (required), `number_of_posts`, `direct_message`, `include_finished`.
 
 Interactions are acknowledged before any work starts (`deferReply`, or `deferUpdate` for buttons), because the 3-second token is shorter than a forum scan or an image upload.
 
 ## Behaviour
 
 **Rankings.** Active and archived threads are scanned with a delay between requests (`FETCH_DELAY_MS`, default 200 ms). Only the forum's default emoji on the opening post counts. Above `PROGRESS_MIN_POSTS` the deferred reply is edited every `PROGRESS_INTERVAL_MS` (5 s) with `🔍 Scanning #channel — 128 / 412 posts (31%) · 1m08s`. Reports are chunked at 50 entries per embed.
+
+**Finished entries.** Posts tagged `DONE` or `PLAYED` are left out of the posted ranking, because they are no longer competing; the footer states how many were hidden. `include_finished:true` puts them back. The tag only filters the message — **the export keeps every post**, since the archive is what the wiki builds the wishlist from.
 
 **Unreadable posts.** A post whose opening message cannot be read is skipped and counted, never treated as zero votes. The report footer states `· 3 posts unreadable` and the export records `failures`. Past `MAX_UNREADABLE_POSTS` (default 20) in one scan the bot stops reading — a forum it cannot read will not produce a ranking — and answers with the count instead of a report. Nothing is archived in that case.
 

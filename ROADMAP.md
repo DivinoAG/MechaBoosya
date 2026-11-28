@@ -128,6 +128,10 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       29 February, because that is the one message about *this year's* celebration. It fires only
       when the celebration day is not 29 February — the first version added the note on the real
       day in a leap year too, which the scheduler test caught.
+- [x] **E8. Hide finished entries from the ranking.** Posts tagged `DONE` or `PLAYED` drop out of the
+      posted list — `include_finished:true` on either ranking command brings them back, off by
+      default. The filter is applied to the report only: the export keeps every post, so the wiki
+      ingest and the wishlist are unaffected. The footer names the count it hid.
 - [x] **E7. `/forum-rank` is for everyone.** It was gated on Manage Channels in code while Discord
       showed it to everyone, so a member could see the command in the picker and be refused when
       running it. The gate goes; only `/forum-rank-force` stays admin. `/help` follows, and a test
