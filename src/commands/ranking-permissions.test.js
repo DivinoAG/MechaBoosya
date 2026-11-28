@@ -72,3 +72,13 @@ test('the registration declares the permission, so Discord hides /forum-rank-for
 
 // The /help filtering test moved to help.test.js: help is driven by its own manifest rather than by
 // the registered command list, so the requirement changed shape with it.
+
+// A flag passed as a bare string is rejected by discord.js with BitFieldInvalid - a throw, not a
+// refusal, so the command dies and the member sees the generic error. Use PermissionsBitField.Flags.
+test('permissions are never checked with a bare string flag', () => {
+    const { execSync } = require('node:child_process');
+    const hits = execSync("grep -rn \"\\.has( *['\\\"]\" src || true", { encoding: 'utf8' })
+        .split('\n')
+        .filter(line => line && !line.includes('.test.js'));
+    assert.deepStrictEqual(hits, [], 'use PermissionsBitField.Flags.ManageChannels, not a string');
+});
