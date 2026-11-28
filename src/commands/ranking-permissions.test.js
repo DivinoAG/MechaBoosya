@@ -64,19 +64,5 @@ test('/forum-rank refuses a member without Manage Channels', async () => {
     assert.match(i.replies[0].content, /permission/i);
 });
 
-test('/help hides commands the member cannot use', async () => {
-    const help = require('./help');
-    const i = interaction({ permissions: null });
-    i.client = {
-        commands: new Map([
-            ['visiblecmd', { data: { name: 'visiblecmd', description: 'for everyone', options: [] } }],
-            ['admincmd', { data: { name: 'admincmd', description: 'staff only', options: [], default_member_permissions: '32' } }],
-        ]),
-    };
-
-    await help.execute(i);
-
-    const shown = JSON.stringify(i.replies[0]);
-    assert.match(shown, /visiblecmd/);
-    assert.doesNotMatch(shown, /admincmd/, 'a null permission set must not reveal staff commands');
-});
+// The /help filtering test moved to help.test.js: help is now driven by its own manifest rather
+// than by the registered command list, so the requirement changed shape with it.

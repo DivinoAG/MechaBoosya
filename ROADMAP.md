@@ -128,6 +128,12 @@ down, and I run on that Mac, so no alert can reach *me* while it is off. Split t
       29 February, because that is the one message about *this year's* celebration. It fires only
       when the celebration day is not 29 February — the first version added the note on the real
       day in a leap year too, which the scheduler test caught.
+- [x] **E6. `/help` as a real manual.** Static manifest of every command with its arguments, rendered
+      in sections (birthdays, rankings, configuration, general) with the same layout as the reference
+      bot: inline-code command, bracketed optional arguments, em dash, one line each. Entries are
+      filtered by *their own* permission — Manage Channels for `/forum-rank`, Manage Server for
+      `/forum-rank-force`, config and `test` — so the list never advertises a refusal. A test fails if
+      a command file exists that the manifest does not mention.
 - [x] **E5. Stop a scan that is failing wholesale.** More than 20 unreadable posts at any point means
       the forum is not really readable, so the scan aborts instead of fetching the remaining hundreds:
       no export, no partial ranking, one message naming the count. Cap tunable via
